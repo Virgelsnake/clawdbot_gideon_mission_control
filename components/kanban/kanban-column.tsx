@@ -5,6 +5,7 @@ import type { Task, KanbanColumn as ColumnType } from '@/types';
 import { TaskCard } from './task-card';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface KanbanColumnProps {
   id: ColumnType;
@@ -15,9 +16,14 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ id, title, color, bgColor, tasks }: KanbanColumnProps) {
+  const [mounted, setMounted] = useState(false);
   const { isOver, setNodeRef } = useDroppable({
     id,
   });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div
@@ -31,7 +37,7 @@ export function KanbanColumn({ id, title, color, bgColor, tasks }: KanbanColumnP
         <div className="flex items-center gap-2">
           <h3 className={`font-semibold text-sm ${color}`}>{title}</h3>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full bg-white/80 dark:bg-black/20 ${color}`}>
-            {tasks.length}
+            {mounted ? tasks.length : 0}
           </span>
         </div>
       </div>
