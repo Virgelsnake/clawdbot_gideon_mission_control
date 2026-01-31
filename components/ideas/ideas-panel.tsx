@@ -1,102 +1,115 @@
 'use client';
 
-import { useState } from 'react';
+import { useDraggable } from '@dnd-kit/core';
 import { useTask } from '@/contexts/task-context';
+import { Lightbulb, GripVertical, Trash2 } from 'lucide-react';
+import { AddIdeaDialog } from './add-idea-dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Lightbulb, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
-export function IdeasPanel() {
-  const { ideas, addIdea, deleteIdea, promoteIdea } = useTask();
-  const [newIdea, setNewIdea] = useState('');
+function IdeaCard({ idea }: { idea: { id: string; content: string; createdAt: number } }) {
+  const { deleteIdea } = useTask();
+  const { 
+    attributes, 
+    listeners, 
+    setNodeRef, 
+    transform, 
+    isDragging 
+  } = useDraggable({
+    id: idea.id,
+    data: { type: 'idea', idea },
+  });
 
-  const handleAddIdea = () => {
-    if (newIdea.trim()) {
-      addIdea(newIdea.trim());
-      setNewIdea('');
-      toast.success('Idea added');
-    }
-  };
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 1000,
+      }
+    : undefined;
 
-  const handlePromote = (id: string, content: string) => {
-    promoteIdea(id);
-    toast.success(`Promoted "${content}" to backlog`);
-  };
-
-  const handleDelete = (id: string) => {
-    deleteIdea(id);
-    toast.success('Idea deleted');
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteIdea(idea.id);
+    toast.success('Idea deleted', { icon: '🗑️' });
   };
 
   return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "group relative rounded-md border border-border bg-card p-2.5 shadow-sm cursor-grab active:cursor-grabbing",
+        "transition-all duration-200",
+        "hover:shadow-md hover:border-primary/30",
+        isDragging && "opacity-0 cursor-grabbing"
+      )}
+    >
+      <div className="flex gap-2">
+        <div className="text-muted-foreground flex-shrink-0 mt-0.5">
+          <GripVertical className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs leading-relaxed line-clamp-3">{idea.content}</p>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-[10px] text-muted-foreground">
+              {new Date(idea.createdAt).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+              })}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+              onClick={handleDelete}
+              title="Delete idea"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function IdeasPanel() {
+  const { ideas } = useTask();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
     <div className="flex h-full flex-col border-r border-border bg-muted/30 w-80">
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-border p-4">
         <div className="flex items-center gap-2">
           <Lightbulb className="h-5 w-5 text-yellow-500" />
           <h2 className="font-semibold">Ideas</h2>
         </div>
-        <span className="text-xs text-muted-foreground">{ideas.length}</span>
-      </div>
-
-      {/* Quick Add */}
-      <div className="border-b border-border p-4">
-        <div className="flex gap-2">
-          <Input
-            value={newIdea}
-            onChange={(e) => setNewIdea(e.target.value)}
-            placeholder="Quick add idea..."
-            onKeyDown={(e) => e.key === 'Enter' && handleAddIdea()}
-          />
-          <Button size="icon" onClick={handleAddIdea} disabled={!newIdea.trim()}>
-            <Plus className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            {mounted ? ideas.length : 0}
+          </span>
+          <AddIdeaDialog />
         </div>
       </div>
 
       {/* Ideas List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {ideas.length === 0 ? (
-          <div className="text-center text-sm text-muted-foreground py-8">
-            <Lightbulb className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>No ideas yet</p>
-            <p className="text-xs mt-1">Capture your ideas here</p>
+          <div className="flex flex-col items-center justify-center h-full text-center py-8">
+            <Lightbulb className="h-10 w-10 text-yellow-500/50 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">No ideas</p>
           </div>
         ) : (
-          ideas.map((idea) => (
-            <div
-              key={idea.id}
-              className="group rounded-lg border border-border bg-card p-3 shadow-sm transition-all duration-200 ease-out hover:shadow-md hover:border-primary/50 hover:-translate-y-0.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
-              tabIndex={0}
-            >
-              <p className="text-sm">{idea.content}</p>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
-                  {new Date(idea.createdAt).toLocaleDateString()}
-                </span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handlePromote(idea.id, idea.content)}
-                    title="Promote to task"
-                  >
-                    <ArrowRight className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive"
-                    onClick={() => handleDelete(idea.id)}
-                    title="Delete idea"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))
+          ideas.map((idea) => <IdeaCard key={idea.id} idea={idea} />)
         )}
       </div>
     </div>

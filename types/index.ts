@@ -43,4 +43,7 @@ export interface Idea {
   id: string;
   content: string;
   createdAt: number;
+  archived?: boolean;
+  convertedToTaskId?: string;
+  archivedAt?: number;
 }

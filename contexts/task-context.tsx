@@ -13,6 +13,7 @@ interface TaskContextValue {
   moveTask: (id: string, toColumn: KanbanColumn) => void;
   addIdea: (content: string) => void;
   deleteIdea: (id: string) => void;
+  archiveIdea: (id: string, taskId: string) => void;
   promoteIdea: (id: string) => void;
 }
 
@@ -32,7 +33,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     return [];
   });
 
-  const [ideas, setIdeas] = useState<Idea[]>(() => {
+  const [allIdeas, setAllIdeas] = useState<Idea[]>(() => {
     // Lazy initialization from localStorage
     if (typeof window !== 'undefined') {
       const stored = loadIdeas();
@@ -41,14 +42,17 @@ export function TaskProvider({ children }: TaskProviderProps) {
     return [];
   });
 
+  // Filter out archived ideas for display
+  const ideas = allIdeas.filter(idea => !idea.archived);
+
   // Save to localStorage on every change
   useEffect(() => {
     saveTasks(tasks);
   }, [tasks]);
 
   useEffect(() => {
-    saveIdeas(ideas);
-  }, [ideas]);
+    saveIdeas(allIdeas);
+  }, [allIdeas]);
 
   const addTask = useCallback((title: string, description?: string, column: KanbanColumn = 'backlog', priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => {
     const now = Date.now();
@@ -98,15 +102,25 @@ export function TaskProvider({ children }: TaskProviderProps) {
       content: content.trim(),
       createdAt: now,
     };
-    setIdeas((prev) => [...prev, newIdea]);
+    setAllIdeas((prev) => [...prev, newIdea]);
   }, []);
 
   const deleteIdea = useCallback((id: string) => {
-    setIdeas((prev) => prev.filter((idea) => idea.id !== id));
+    setAllIdeas((prev) => prev.filter((idea) => idea.id !== id));
+  }, []);
+
+  const archiveIdea = useCallback((id: string, taskId: string) => {
+    setAllIdeas((prev) =>
+      prev.map((idea) =>
+        idea.id === id
+          ? { ...idea, archived: true, convertedToTaskId: taskId, archivedAt: Date.now() }
+          : idea
+      )
+    );
   }, []);
 
   const promoteIdea = useCallback((id: string) => {
-    const idea = ideas.find((i) => i.id === id);
+    const idea = allIdeas.find((i) => i.id === id);
     if (idea) {
       // Add as task to backlog
       const now = Date.now();
@@ -118,10 +132,10 @@ export function TaskProvider({ children }: TaskProviderProps) {
         updatedAt: now,
       };
       setTasks((prev) => [...prev, newTask]);
-      // Remove from ideas
-      setIdeas((prev) => prev.filter((i) => i.id !== id));
+      // Archive the idea
+      archiveIdea(id, newTask.id);
     }
-  }, [ideas]);
+  }, [allIdeas, archiveIdea]);
 
   const value: TaskContextValue = {
     tasks,
@@ -132,6 +146,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     moveTask,
     addIdea,
     deleteIdea,
+    archiveIdea,
     promoteIdea,
   };
 
