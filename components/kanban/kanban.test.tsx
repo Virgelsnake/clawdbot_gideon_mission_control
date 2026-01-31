@@ -11,6 +11,31 @@ const mockAddTask = vi.fn();
 const mockUpdateTask = vi.fn();
 const mockDeleteTask = vi.fn();
 const mockMoveTask = vi.fn();
+const mockSetFilter = vi.fn();
+const mockClearFilters = vi.fn();
+
+const defaultMockReturn = {
+  tasks: [],
+  filteredTasks: [],
+  ideas: [],
+  addTask: mockAddTask,
+  updateTask: mockUpdateTask,
+  deleteTask: mockDeleteTask,
+  moveTask: mockMoveTask,
+  addIdea: vi.fn(),
+  deleteIdea: vi.fn(),
+  archiveIdea: vi.fn(),
+  promoteIdea: vi.fn(),
+  filters: {
+    search: '',
+    priorities: [],
+    assignee: '',
+    labels: [],
+    dueDateFilter: null,
+  },
+  setFilter: mockSetFilter,
+  clearFilters: mockClearFilters,
+};
 
 vi.mock('@/contexts/task-context', () => ({
   useTask: () => mockUseTask(),
@@ -20,6 +45,7 @@ vi.mock('@/contexts/task-context', () => ({
 describe('Kanban Components (FR-4.2, FR-4.5)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseTask.mockReturnValue(defaultMockReturn);
   });
 
   describe('KanbanColumn', () => {
@@ -30,14 +56,12 @@ describe('Kanban Components (FR-4.2, FR-4.5)', () => {
       ];
 
       mockUseTask.mockReturnValue({
+        ...defaultMockReturn,
         tasks,
-        addTask: mockAddTask,
-        updateTask: mockUpdateTask,
-        deleteTask: mockDeleteTask,
-        moveTask: mockMoveTask,
+        filteredTasks: tasks,
       });
 
-      render(<KanbanColumn id="todo" title="To Do" tasks={tasks} />);
+      render(<KanbanColumn id="todo" title="To Do" color="text-blue-600" bgColor="bg-blue-50" tasks={tasks} />);
 
       expect(screen.getByText('To Do')).toBeInTheDocument();
       expect(screen.getByText('2')).toBeInTheDocument();
@@ -45,14 +69,12 @@ describe('Kanban Components (FR-4.2, FR-4.5)', () => {
 
     test('renders empty column with zero count', () => {
       mockUseTask.mockReturnValue({
+        ...defaultMockReturn,
         tasks: [],
-        addTask: mockAddTask,
-        updateTask: mockUpdateTask,
-        deleteTask: mockDeleteTask,
-        moveTask: mockMoveTask,
+        filteredTasks: [],
       });
 
-      render(<KanbanColumn id="done" title="Done" tasks={[]} />);
+      render(<KanbanColumn id="done" title="Done" color="text-emerald-600" bgColor="bg-emerald-50" tasks={[]} />);
 
       expect(screen.getByText('Done')).toBeInTheDocument();
       expect(screen.getByText('0')).toBeInTheDocument();
@@ -71,11 +93,9 @@ describe('Kanban Components (FR-4.2, FR-4.5)', () => {
       };
 
       mockUseTask.mockReturnValue({
+        ...defaultMockReturn,
         tasks: [task],
-        addTask: mockAddTask,
-        updateTask: mockUpdateTask,
-        deleteTask: mockDeleteTask,
-        moveTask: mockMoveTask,
+        filteredTasks: [task],
       });
 
       render(<TaskCard task={task} />);
@@ -94,11 +114,9 @@ describe('Kanban Components (FR-4.2, FR-4.5)', () => {
       };
 
       mockUseTask.mockReturnValue({
+        ...defaultMockReturn,
         tasks: [task],
-        addTask: mockAddTask,
-        updateTask: mockUpdateTask,
-        deleteTask: mockDeleteTask,
-        moveTask: mockMoveTask,
+        filteredTasks: [task],
       });
 
       render(<TaskCard task={task} />);
@@ -117,11 +135,9 @@ describe('Kanban Components (FR-4.2, FR-4.5)', () => {
       };
 
       mockUseTask.mockReturnValue({
+        ...defaultMockReturn,
         tasks: [task],
-        addTask: mockAddTask,
-        updateTask: mockUpdateTask,
-        deleteTask: mockDeleteTask,
-        moveTask: mockMoveTask,
+        filteredTasks: [task],
       });
 
       render(<TaskCard task={task} />);
@@ -134,11 +150,9 @@ describe('Kanban Components (FR-4.2, FR-4.5)', () => {
   describe('KanbanBoard', () => {
     test('renders all five columns', () => {
       mockUseTask.mockReturnValue({
+        ...defaultMockReturn,
         tasks: [],
-        addTask: mockAddTask,
-        updateTask: mockUpdateTask,
-        deleteTask: mockDeleteTask,
-        moveTask: mockMoveTask,
+        filteredTasks: [],
       });
 
       render(<KanbanBoard />);
@@ -152,16 +166,15 @@ describe('Kanban Components (FR-4.2, FR-4.5)', () => {
 
     test('renders Add Task button', () => {
       mockUseTask.mockReturnValue({
+        ...defaultMockReturn,
         tasks: [],
-        addTask: mockAddTask,
-        updateTask: mockUpdateTask,
-        deleteTask: mockDeleteTask,
-        moveTask: mockMoveTask,
+        filteredTasks: [],
       });
 
       render(<KanbanBoard />);
 
-      expect(screen.getByRole('button', { name: /add task/i })).toBeInTheDocument();
+      const addTaskButtons = screen.getAllByRole('button', { name: /^add task$/i });
+      expect(addTaskButtons.length).toBeGreaterThanOrEqual(1);
     });
   });
 });

@@ -20,6 +20,16 @@ export interface Message {
 // Task/Kanban types
 export type KanbanColumn = 'backlog' | 'todo' | 'in-progress' | 'review' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type DueDateFilter = 'overdue' | 'today' | 'this-week' | 'no-date' | null;
+
+export interface TaskFilters {
+  search: string;
+  priorities: TaskPriority[];
+  assignee: string;
+  labels: string[];
+  dueDateFilter: DueDateFilter;
+}
+
 export interface TaskLabel {
   id: string;
   name: string;

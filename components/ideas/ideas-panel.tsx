@@ -103,7 +103,12 @@ export function IdeasPanel() {
 
       {/* Ideas List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {ideas.length === 0 ? (
+        {!mounted ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-8">
+            <Lightbulb className="h-10 w-10 text-yellow-500/50 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">Loading ideas…</p>
+          </div>
+        ) : ideas.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <Lightbulb className="h-10 w-10 text-yellow-500/50 mb-3" />
             <p className="text-sm font-medium text-muted-foreground">No ideas</p>

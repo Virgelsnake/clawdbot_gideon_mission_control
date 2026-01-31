@@ -2,17 +2,21 @@
 
 import { useTask } from '@/contexts/task-context';
 import { AddTaskDialog } from './add-task-dialog';
+import { FilterDropdown } from './filter-dropdown';
+import { ActiveFilters } from './active-filters';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Filter,
   SortAsc,
   LayoutGrid,
   List,
 } from 'lucide-react';
 import type { KanbanColumn as ColumnType } from '@/types';
 import { KanbanColumn } from './kanban-column';
+import { TaskList } from './task-list';
 import { useState, useEffect } from 'react';
+
+type ViewMode = 'board' | 'list';
 
 const COLUMNS: {
   id: ColumnType;
@@ -28,14 +32,16 @@ const COLUMNS: {
 ];
 
 export function KanbanBoard() {
-  const { tasks } = useTask();
+  const { tasks, filteredTasks } = useTask();
   const [mounted, setMounted] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('board');
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const totalTasks = tasks.length;
+  const filteredCount = filteredTasks.length;
   const completedTasks = tasks.filter((t) => t.column === 'done').length;
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -45,25 +51,42 @@ export function KanbanBoard() {
       <div className="flex flex-col gap-4 border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-semibold">Board View</h2>
+            <h2 className="text-xl font-semibold">{viewMode === 'board' ? 'Board View' : 'List View'}</h2>
             <Badge variant="secondary" className="font-normal">
-              {mounted ? totalTasks : 0} tasks
+              {mounted ? (
+                <>
+                  {filteredCount} {filteredCount !== totalTasks && `/ ${totalTasks}`} tasks
+                </>
+              ) : (
+                '0 tasks'
+              )}
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Filter className="h-4 w-4" />
-              Filter
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2">
-              <SortAsc className="h-4 w-4" />
-              Sort
-            </Button>
+            <FilterDropdown />
+            {viewMode === 'board' && (
+              <Button variant="outline" size="sm" className="gap-2">
+                <SortAsc className="h-4 w-4" />
+                Sort
+              </Button>
+            )}
             <div className="h-4 w-px bg-border mx-1" />
-            <Button variant="outline" size="icon" className="h-8 w-8">
+            <Button
+              variant={viewMode === 'board' ? 'outline' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode('board')}
+              aria-label="Board view"
+            >
               <LayoutGrid className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button
+              variant={viewMode === 'list' ? 'outline' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+            >
               <List className="h-4 w-4" />
             </Button>
             <div className="h-4 w-px bg-border mx-1" />
@@ -72,40 +95,49 @@ export function KanbanBoard() {
         </div>
 
         {/* Progress Bar */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 max-w-md">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-              <span>Project Progress</span>
-              <span>{progress}%</span>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 max-w-md">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                <span>Project Progress</span>
+                <span>{mounted ? progress : 0}%</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${mounted ? progress : 0}%` }}
+                />
+              </div>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>{mounted ? completedTasks : 0} completed</span>
+              <span>•</span>
+              <span>{mounted ? totalTasks - completedTasks : 0} remaining</span>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{mounted ? completedTasks : 0} completed</span>
-            <span>•</span>
-            <span>{mounted ? totalTasks - completedTasks : 0} remaining</span>
-          </div>
+
+          {/* Active Filters */}
+          <ActiveFilters />
         </div>
       </div>
 
-      {/* Columns */}
-      <div className="flex flex-1 gap-4 overflow-x-auto px-6 py-4">
-        {COLUMNS.map((column) => (
-          <KanbanColumn
-            key={column.id}
-            id={column.id}
-            title={column.title}
-            color={column.color}
-            bgColor={column.bgColor}
-            tasks={tasks.filter((task) => task.column === column.id)}
-          />
-        ))}
-      </div>
+      {/* View Content */}
+      {viewMode === 'board' ? (
+        <div className="flex flex-1 gap-4 overflow-x-auto px-6 py-4">
+          {COLUMNS.map((column) => (
+            <KanbanColumn
+              key={column.id}
+              id={column.id}
+              title={column.title}
+              color={column.color}
+              bgColor={column.bgColor}
+              tasks={filteredTasks.filter((task) => task.column === column.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <TaskList />
+      )}
     </div>
   );
 }

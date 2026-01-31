@@ -1,11 +1,12 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import type { Task, KanbanColumn, Idea } from '@/types';
+import type { Task, KanbanColumn, Idea, TaskFilters, TaskPriority, DueDateFilter } from '@/types';
 import { loadTasks, saveTasks, loadIdeas, saveIdeas } from '@/lib/storage/tasks';
 
 interface TaskContextValue {
   tasks: Task[];
+  filteredTasks: Task[];
   ideas: Idea[];
   addTask: (title: string, description?: string, column?: KanbanColumn, priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => void;
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => void;
@@ -15,6 +16,9 @@ interface TaskContextValue {
   deleteIdea: (id: string) => void;
   archiveIdea: (id: string, taskId: string) => void;
   promoteIdea: (id: string) => void;
+  filters: TaskFilters;
+  setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void;
+  clearFilters: () => void;
 }
 
 const TaskContext = createContext<TaskContextValue | undefined>(undefined);
@@ -42,8 +46,71 @@ export function TaskProvider({ children }: TaskProviderProps) {
     return [];
   });
 
+  const [filters, setFilters] = useState<TaskFilters>({
+    search: '',
+    priorities: [],
+    assignee: '',
+    labels: [],
+    dueDateFilter: null,
+  });
+
   // Filter out archived ideas for display
   const ideas = allIdeas.filter(idea => !idea.archived);
+
+  // Compute filtered tasks based on active filters
+  const filteredTasks = tasks.filter(task => {
+    // Search filter (title and description)
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      const matchesTitle = task.title.toLowerCase().includes(searchLower);
+      const matchesDesc = task.description?.toLowerCase().includes(searchLower) ?? false;
+      if (!matchesTitle && !matchesDesc) return false;
+    }
+
+    // Priority filter
+    if (filters.priorities.length > 0) {
+      if (!task.priority || !filters.priorities.includes(task.priority)) return false;
+    }
+
+    // Assignee filter
+    if (filters.assignee) {
+      const assigneeLower = filters.assignee.toLowerCase();
+      if (!task.assignee?.toLowerCase().includes(assigneeLower)) return false;
+    }
+
+    // Labels filter
+    if (filters.labels.length > 0) {
+      if (!task.labels || !filters.labels.some(label => task.labels?.includes(label))) return false;
+    }
+
+    // Due date filter
+    if (filters.dueDateFilter) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayMs = today.getTime();
+      const weekMs = 7 * 24 * 60 * 60 * 1000;
+
+      switch (filters.dueDateFilter) {
+        case 'overdue':
+          if (!task.dueDate || task.dueDate >= todayMs) return false;
+          break;
+        case 'today':
+          if (!task.dueDate) return false;
+          const taskDate = new Date(task.dueDate);
+          taskDate.setHours(0, 0, 0, 0);
+          if (taskDate.getTime() !== todayMs) return false;
+          break;
+        case 'this-week':
+          if (!task.dueDate || task.dueDate < todayMs || task.dueDate > todayMs + weekMs) return false;
+          break;
+        case 'no-date':
+          if (task.dueDate) return false;
+          break;
+      }
+    }
+
+    return true;
+  });
 
   // Save to localStorage on every change
   useEffect(() => {
@@ -53,6 +120,20 @@ export function TaskProvider({ children }: TaskProviderProps) {
   useEffect(() => {
     saveIdeas(allIdeas);
   }, [allIdeas]);
+
+  const setFilter = useCallback(<K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setFilters({
+      search: '',
+      priorities: [],
+      assignee: '',
+      labels: [],
+      dueDateFilter: null,
+    });
+  }, []);
 
   const addTask = useCallback((title: string, description?: string, column: KanbanColumn = 'backlog', priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => {
     const now = Date.now();
@@ -139,6 +220,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
 
   const value: TaskContextValue = {
     tasks,
+    filteredTasks,
     ideas,
     addTask,
     updateTask,
@@ -148,6 +230,9 @@ export function TaskProvider({ children }: TaskProviderProps) {
     deleteIdea,
     archiveIdea,
     promoteIdea,
+    filters,
+    setFilter,
+    clearFilters,
   };
 
   return (
