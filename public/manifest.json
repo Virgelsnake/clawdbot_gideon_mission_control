@@ -1,0 +1,22 @@
+{
+  "name": "ClawdBot Gideon Mission Control",
+  "short_name": "Gideon MC",
+  "description": "PWA dashboard for managing and monitoring the ClawdBot Gideon autonomous AI agent",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e1e1e",
+  "theme_color": "#2d2d2d",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
