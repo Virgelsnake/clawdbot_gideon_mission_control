@@ -2,6 +2,22 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment
+
+This app connects to the local Clawdbot Gateway via **server-side** API routes (proxy), so the browser never sees the Gateway token.
+
+1) Copy env template:
+
+```bash
+cp .env.example .env.local
+```
+
+2) Edit `.env.local` and set:
+- `CLAWDBOT_GATEWAY_URL` (default `http://127.0.0.1:18789`)
+- `CLAWDBOT_GATEWAY_TOKEN` (required)
+
+### Run
+
 First, run the development server:
 
 ```bash

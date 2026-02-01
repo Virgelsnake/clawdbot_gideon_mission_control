@@ -22,6 +22,7 @@ export function KanbanColumn({ id, title, color, bgColor, tasks }: KanbanColumnP
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

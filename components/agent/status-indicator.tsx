@@ -40,7 +40,7 @@ const statusConfig: Record<AgentStatus, { label: string; color: string; bg: stri
 };
 
 export function StatusIndicator() {
-  const { status, currentModel } = useAgent();
+  const { status, currentModel, connected } = useAgent();
   const config = statusConfig[status];
 
   return (
@@ -75,7 +75,7 @@ export function StatusIndicator() {
         </div>
       </div>
       <span className="text-xs text-muted-foreground px-1">
-        {currentModel}
+        {connected ? currentModel : 'Disconnected'}
       </span>
     </div>
   );
