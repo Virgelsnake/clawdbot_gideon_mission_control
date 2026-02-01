@@ -29,7 +29,23 @@ export async function GET() {
       );
     }
 
-    const data = await res.json();
+    let data: unknown;
+    try {
+      data = await res.json();
+    } catch {
+      return Response.json(
+        {
+          ok: true,
+          source: 'fallback',
+          warning: {
+            code: 'gateway_error',
+            message: 'Gateway /v1/models did not return JSON; using fallback list',
+          },
+          models: FALLBACK_MODELS,
+        },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
 
     // Normalize to an array of {id,label}
     const raw = (data as { data?: unknown })?.data;

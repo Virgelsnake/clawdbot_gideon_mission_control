@@ -25,7 +25,13 @@ export async function GET() {
 
     // We don’t have a dedicated “current model” endpoint in Gateway.
     // The UI can treat this as “connected” and use its selected model state.
-    const data = await res.json();
+    // Some gateway builds may not implement /v1/models (or may return non-JSON).
+    let data: unknown = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
 
     return Response.json(
       {

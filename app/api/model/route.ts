@@ -32,6 +32,10 @@ export async function POST(req: NextRequest) {
           messages: [
             {
               role: 'system',
+              content: 'You are Gideon. Follow the user instructions.',
+            },
+            {
+              role: 'user',
               content: `Switch to model ${model}. Reply with a short confirmation.`,
             },
           ],
