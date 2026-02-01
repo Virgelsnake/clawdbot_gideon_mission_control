@@ -1,11 +1,7 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_CLAWDBOT_API_URL || 'http://127.0.0.1:18789';
-const USE_PROXY = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true';
-
+// Client-side chat must always go through the Next.js proxy.
+// The browser must never talk to the Gateway directly (no token exposure).
 function getApiUrl(): string {
-  if (USE_PROXY) {
-    return '/api/chat';
-  }
-  return `${API_BASE_URL}/v1/chat/completions`;
+  return '/api/chat';
 }
 
 export interface ChatMessage {
@@ -44,7 +40,6 @@ export interface SendMessageOptions {
   onToken: StreamCallback;
   onError: ErrorCallback;
   onComplete: CompleteCallback;
-  apiToken?: string;
 }
 
 export async function sendMessage({
@@ -53,14 +48,12 @@ export async function sendMessage({
   onToken,
   onError,
   onComplete,
-  apiToken,
 }: SendMessageOptions): Promise<void> {
   try {
     const response = await fetch(getApiUrl(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(apiToken && { 'Authorization': `Bearer ${apiToken}` }),
       },
       body: JSON.stringify({
         model,

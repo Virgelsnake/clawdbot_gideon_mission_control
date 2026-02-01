@@ -15,14 +15,11 @@ export function ModelSelector() {
   const { currentModel, modelList, setCurrentModel } = useAgent();
   const { addMessage } = useChat();
 
-  const handleModelSelect = (model: string) => {
+  const handleModelSelect = async (model: string) => {
     if (model === currentModel) return;
-    
-    // Update the model
-    setCurrentModel(model);
-    
-    // Send system message to chat about model swap
-    addMessage('assistant', `Switched to model: ${model}`);
+
+    await setCurrentModel(model);
+    addMessage('assistant', `Requested model: ${model}`);
   };
 
   return (
@@ -39,7 +36,7 @@ export function ModelSelector() {
         {modelList.map((model) => (
           <DropdownMenuItem
             key={model}
-            onClick={() => handleModelSelect(model)}
+            onClick={() => void handleModelSelect(model)}
             className="flex items-center justify-between"
           >
             <span className="truncate">{model}</span>

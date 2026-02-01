@@ -32,13 +32,16 @@ export async function GET() {
     const data = await res.json();
 
     // Normalize to an array of {id,label}
-    const items: Array<{ id: string; label: string }> = Array.isArray(data?.data)
-      ? data.data
-          .map((m: any) => ({
-            id: String(m.id ?? m.model ?? ''),
-            label: String(m.id ?? m.model ?? ''),
-          }))
-          .filter((m: any) => m.id)
+    const raw = (data as { data?: unknown })?.data;
+
+    const items: Array<{ id: string; label: string }> = Array.isArray(raw)
+      ? raw
+          .map((m: unknown) => {
+            const mm = typeof m === 'object' && m !== null ? (m as Record<string, unknown>) : {};
+            const id = String(mm.id ?? mm.model ?? '').trim();
+            return { id, label: id };
+          })
+          .filter((m) => m.id)
       : FALLBACK_MODELS;
 
     return Response.json(
