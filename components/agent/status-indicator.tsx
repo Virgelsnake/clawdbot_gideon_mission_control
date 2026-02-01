@@ -4,7 +4,10 @@ import { useAgent } from '@/contexts/agent-context';
 import type { AgentStatus } from '@/types';
 import { cn } from '@/lib/utils';
 
-const statusConfig: Record<AgentStatus, { label: string; color: string; bg: string; pulse: boolean; emoji: string; ringColor: string }> = {
+const statusConfig: Record<
+  AgentStatus,
+  { label: string; color: string; bg: string; pulse: boolean; emoji: string; ringColor: string }
+> = {
   idle: {
     label: 'Idle',
     color: 'bg-gray-500',
@@ -18,7 +21,7 @@ const statusConfig: Record<AgentStatus, { label: string; color: string; bg: stri
     color: 'bg-yellow-500',
     bg: 'bg-yellow-500/10',
     pulse: true,
-    emoji: '😪',
+    emoji: '🤔',
     ringColor: 'from-yellow-400/0 via-yellow-400/60 to-yellow-400/0',
   },
   active: {
@@ -26,7 +29,7 @@ const statusConfig: Record<AgentStatus, { label: string; color: string; bg: stri
     color: 'bg-green-500',
     bg: 'bg-green-500/10',
     pulse: true,
-    emoji: '😪',
+    emoji: '⚡',
     ringColor: 'from-green-400/0 via-green-400/60 to-green-400/0',
   },
   resting: {
@@ -34,7 +37,7 @@ const statusConfig: Record<AgentStatus, { label: string; color: string; bg: stri
     color: 'bg-red-500',
     bg: 'bg-red-500/10',
     pulse: false,
-    emoji: '😪',
+    emoji: '🛑',
     ringColor: 'from-red-400/0 via-red-400/50 to-red-400/0',
   },
 };

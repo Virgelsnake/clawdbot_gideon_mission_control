@@ -22,11 +22,8 @@ export function ChatPanel() {
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
-      if (window.innerWidth < 1024) {
-        setIsOpen(false);
-      }
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -77,7 +74,7 @@ export function ChatPanel() {
         variant="secondary"
         size="icon"
         onClick={() => setIsOpen(true)}
-        className="fixed right-4 bottom-4 z-50 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow lg:top-20 lg:h-10 lg:w-10 lg:rounded-md"
+        className="fixed right-4 bottom-4 z-[100] h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow lg:top-20 lg:h-10 lg:w-10 lg:rounded-md"
         aria-label="Open chat panel"
       >
         <div className="relative">
@@ -101,9 +98,9 @@ export function ChatPanel() {
         />
       )}
       <aside className={cn(
-        "border-l border-border bg-background flex flex-col z-50 transition-all duration-300 ease-out",
+        "border-l border-border bg-background flex flex-col z-[100] transition-all duration-300 ease-out",
         isMobile 
-          ? "fixed inset-x-4 top-20 bottom-4 rounded-xl shadow-2xl max-w-md mx-auto h-auto" 
+          ? "fixed inset-x-4 top-16 bottom-4 rounded-xl shadow-2xl max-w-md mx-auto h-auto" 
           : "w-80 relative"
       )}>
         <div className="flex items-center justify-between border-b border-border p-3">
