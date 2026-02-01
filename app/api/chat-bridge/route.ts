@@ -4,6 +4,7 @@ import { jsonError } from '@/lib/api/errors';
 import { gatewayToolInvoke, extractToolJson } from '@/lib/gateway/tools';
 
 const SESSION_KEY = process.env.CLAWDBOT_CANONICAL_SESSION_KEY || 'agent:main:main';
+const TELEGRAM_ECHO_TARGET = process.env.CLAWDBOT_TELEGRAM_ECHO_TARGET || '';
 
 type SessionsHistory = {
   sessionKey: string;
@@ -18,6 +19,11 @@ type Msg = {
 
 type ContentBlock = { type?: string; text?: string };
 
+function isNoiseText(txt: string): boolean {
+  const t = txt.trim();
+  return t === 'ANNOUNCE_SKIP' || t.startsWith('ANNOUNCE_');
+}
+
 function pickLatestAssistantText(hist: SessionsHistory, minTimestampMs: number): string | null {
   // Walk newest→oldest and find the first assistant message with a text block.
   for (let i = hist.messages.length - 1; i >= 0; i--) {
@@ -28,7 +34,10 @@ function pickLatestAssistantText(hist: SessionsHistory, minTimestampMs: number):
 
     const blocks = Array.isArray(m?.content) ? (m.content as ContentBlock[]) : [];
     const txt = blocks.find((b) => b?.type === 'text')?.text;
-    if (txt) return String(txt);
+    if (!txt) continue;
+    const s = String(txt);
+    if (isNoiseText(s)) continue;
+    return s;
   }
   return null;
 }
@@ -47,7 +56,18 @@ export async function POST(req: NextRequest) {
     return jsonError(400, { code: 'bad_request', message: 'Missing message' });
   }
 
-  // Send the user message into the canonical Telegram DM session.
+  // Echo the user message into Telegram so the visible thread matches.
+  // (Mission Control can't send as Steve; we send a Gideon note.)
+  if (TELEGRAM_ECHO_TARGET) {
+    await gatewayToolInvoke('message', {
+      action: 'send',
+      channel: 'telegram',
+      target: TELEGRAM_ECHO_TARGET,
+      message: `Steve (via Mission Control): ${message}`,
+    });
+  }
+
+  // Send the user message into the canonical session.
   // This runs the agent in that same session context.
   await gatewayToolInvoke('sessions_send', {
     sessionKey: SESSION_KEY,
