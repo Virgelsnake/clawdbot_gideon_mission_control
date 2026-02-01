@@ -1,7 +1,7 @@
 // Client-side chat must always go through the Next.js proxy.
 // The browser must never talk to the Gateway directly (no token exposure).
 function getApiUrl(): string {
-  return '/api/chat';
+  return '/api/chat-bridge';
 }
 
 export interface ChatMessage {
@@ -12,22 +12,6 @@ export interface ChatMessage {
 export interface ChatCompletionRequest {
   model: string;
   messages: ChatMessage[];
-  stream?: boolean;
-}
-
-export interface ChatCompletionChunk {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  choices: Array<{
-    index: number;
-    delta: {
-      content?: string;
-      role?: string;
-    };
-    finish_reason: string | null;
-  }>;
 }
 
 export type StreamCallback = (token: string) => void;
@@ -35,6 +19,8 @@ export type ErrorCallback = (error: Error) => void;
 export type CompleteCallback = () => void;
 
 export interface SendMessageOptions {
+  // model is kept for UI compatibility, but in bridge mode the canonical session
+  // owns the real model selection.
   model: string;
   messages: ChatMessage[];
   onToken: StreamCallback;
@@ -43,6 +29,7 @@ export interface SendMessageOptions {
 }
 
 export async function sendMessage({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   model,
   messages,
   onToken,
@@ -56,9 +43,9 @@ export async function sendMessage({
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model,
-        messages,
-        stream: true,
+        // In bridge mode, we send only the latest user message into the canonical session.
+        // The server bridges it into the Telegram DM session.
+        message: messages[messages.length - 1]?.content ?? '',
       }),
     });
 
@@ -67,57 +54,10 @@ export async function sendMessage({
       throw new Error(`API error: ${response.status} ${errorText}`);
     }
 
-    if (!response.body) {
-      throw new Error('No response body');
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      
-      if (done) {
-        onComplete();
-        break;
-      }
-
-      buffer += decoder.decode(value, { stream: true });
-      
-      // Process SSE lines
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep incomplete line in buffer
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        
-        // Skip empty lines and comments
-        if (!trimmed || trimmed.startsWith(':')) continue;
-        
-        // SSE data lines start with "data: "
-        if (trimmed.startsWith('data: ')) {
-          const data = trimmed.slice(6);
-          
-          // Check for stream end
-          if (data === '[DONE]') {
-            onComplete();
-            return;
-          }
-
-          try {
-            const chunk: ChatCompletionChunk = JSON.parse(data);
-            const content = chunk.choices[0]?.delta?.content;
-            if (content) {
-              onToken(content);
-            }
-          } catch {
-            // Skip malformed JSON
-            console.warn('Failed to parse SSE chunk:', data);
-          }
-        }
-      }
-    }
+    const data = await response.json();
+    const reply = String(data?.reply ?? '');
+    if (reply) onToken(reply);
+    onComplete();
   } catch (error) {
     onError(error instanceof Error ? error : new Error(String(error)));
   }
