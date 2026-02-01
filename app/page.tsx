@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { DndContext, DragEndEvent, useSensor, useSensors, MouseSensor, DragStartEvent, closestCorners, DragOverlay } from '@dnd-kit/core';
 import { KanbanBoard } from '@/components/kanban/kanban-board';
 import { IdeasPanel } from '@/components/ideas/ideas-panel';
@@ -136,6 +137,10 @@ function KanbanContent() {
   );
 }
 
-export default function Home() {
+function Home() {
   return <KanbanContent />;
 }
+
+// dnd-kit injects dynamic attributes (role/tabIndex/aria, etc.) that can differ
+// between server render and client hydration. Render this page client-only.
+export default dynamic(() => Promise.resolve(Home), { ssr: false });
