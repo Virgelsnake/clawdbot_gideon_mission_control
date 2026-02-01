@@ -3,8 +3,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import type { Task, KanbanColumn as ColumnType } from '@/types';
 import { TaskCard } from './task-card';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { AddTaskDialog } from './add-task-dialog';
 import { useState, useEffect } from 'react';
 
 interface KanbanColumnProps {
@@ -51,14 +50,7 @@ export function KanbanColumn({ id, title, color, bgColor, tasks }: KanbanColumnP
 
       {/* Add Task Button */}
       <div className="p-3 border-t border-border/50">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-        >
-          <Plus className="h-4 w-4" />
-          Add Task
-        </Button>
+        <AddTaskDialog defaultColumn={id} />
       </div>
     </div>
   );
