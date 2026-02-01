@@ -37,6 +37,7 @@ export function KanbanBoard() {
   const [viewMode, setViewMode] = useState<ViewMode>('board');
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
