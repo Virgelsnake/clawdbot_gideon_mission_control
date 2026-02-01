@@ -60,7 +60,7 @@ export async function GET() {
     if (err instanceof Error && err.message === 'MISSING_GATEWAY_TOKEN') {
       return jsonError(500, {
         code: 'missing_config',
-        message: 'Server is missing CLAWDBOT_API_TOKEN',
+        message: 'Server is missing CLAWDBOT_GATEWAY_TOKEN',
       });
     }
 

@@ -4,8 +4,11 @@ type GatewayEnv = {
 };
 
 export function getGatewayEnv(): GatewayEnv {
-  const url = process.env.CLAWDBOT_API_URL || 'http://127.0.0.1:18789';
-  const token = process.env.CLAWDBOT_API_TOKEN || '';
+  const url =
+    process.env.CLAWDBOT_GATEWAY_URL ||
+    process.env.CLAWDBOT_API_URL ||
+    'http://127.0.0.1:18789';
+  const token = process.env.CLAWDBOT_GATEWAY_TOKEN || process.env.CLAWDBOT_API_TOKEN || '';
   return { url, token };
 }
 
