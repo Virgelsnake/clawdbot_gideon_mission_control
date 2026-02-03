@@ -99,7 +99,7 @@ export function AddTaskDialog({ defaultColumn = 'backlog' }: AddTaskDialogProps)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" size="sm" className="gap-2">
+        <Button variant="secondary" size="sm" className="gap-2">
           <Plus className="h-4 w-4" />
           Add Task
         </Button>
