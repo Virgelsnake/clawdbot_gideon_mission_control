@@ -48,6 +48,12 @@ const PRIORITIES: { id: TaskPriority; label: string; color: string }[] = [
 
 
 export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }: AddTaskDialogProps) {
+  const { addTask } = useTask();
+  const { settings } = useSettings();
+
+  const gideonLabel = settings.labels.find(l => l.name.toLowerCase() === 'gideon');
+  const defaultLabels = gideonLabel ? [gideonLabel.name] : [];
+
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -55,9 +61,7 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [assignee, setAssignee] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
-  const { addTask } = useTask();
-  const { settings } = useSettings();
+  const [selectedLabels, setSelectedLabels] = useState<string[]>(defaultLabels);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -78,7 +82,7 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
       setPriority('medium');
       setAssignee('');
       setDueDate('');
-      setSelectedLabels([]);
+      setSelectedLabels(defaultLabels);
       setOpen(false);
     }
   };
