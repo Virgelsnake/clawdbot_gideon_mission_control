@@ -149,17 +149,13 @@ async function sendBridgeMessage({
 // --- Public API ---
 
 export async function sendMessage(options: SendMessageOptions): Promise<void> {
+  // Gateway /v1/chat/completions is no longer available (HTTP API removed).
+  // Use the bridge path which communicates via /tools/invoke (sessions_send).
   try {
-    await sendStreamingMessage(options);
-  } catch (streamError) {
-    // If SSE streaming fails (gateway down, etc.), fall back to bridge
-    console.warn('SSE streaming failed, falling back to bridge:', streamError);
-    try {
-      await sendBridgeMessage(options);
-    } catch (bridgeError) {
-      options.onError(
-        bridgeError instanceof Error ? bridgeError : new Error(String(bridgeError))
-      );
-    }
+    await sendBridgeMessage(options);
+  } catch (bridgeError) {
+    options.onError(
+      bridgeError instanceof Error ? bridgeError : new Error(String(bridgeError))
+    );
   }
 }

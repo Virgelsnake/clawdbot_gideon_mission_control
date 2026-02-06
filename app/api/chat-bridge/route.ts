@@ -73,34 +73,59 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Send the user message into the canonical session.
-  // This runs the agent in that same session context.
-  await gatewayToolInvoke('sessions_send', {
-    sessionKey: SESSION_KEY,
-    message,
-  });
+  // Await sessions_send — the gateway runs the agent synchronously and returns
+  // the reply inline when status is "ok". Only fall back to polling on "timeout".
+  console.log(`[DIAG][/api/chat-bridge] Calling sessions_send, sessionKey=${SESSION_KEY}`);
 
-  // Poll for assistant response (non-streaming v1).
+  type SendResult = { status?: string; reply?: string; sessionKey?: string };
+  let sendResult: SendResult = {};
+
+  try {
+    const inv = await gatewayToolInvoke('sessions_send', {
+      sessionKey: SESSION_KEY,
+      message,
+    }, undefined, 120_000);
+    const resultJson = extractToolJson<SendResult>(inv);
+    sendResult = resultJson;
+    console.log(`[DIAG][/api/chat-bridge] sessions_send result: status=${resultJson.status}, reply=${String(resultJson.reply ?? '').slice(0, 100)}`);
+  } catch (sendErr) {
+    const msg = sendErr instanceof Error ? sendErr.message : String(sendErr);
+    console.error(`[DIAG][/api/chat-bridge] sessions_send FAILED: ${msg}`);
+    return jsonError(500, { code: 'internal_error', message: 'sessions_send failed', details: msg });
+  }
+
+  // If the agent replied inline, return immediately — no polling needed.
+  if (sendResult.status === 'ok' && sendResult.reply) {
+    return Response.json(
+      { ok: true, reply: sendResult.reply, sessionKey: SESSION_KEY },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+
+  // Agent timed out or no inline reply — fall back to polling session history.
+  console.log(`[DIAG][/api/chat-bridge] No inline reply (status=${sendResult.status}), falling back to polling`);
   const start = Date.now();
-  const deadline = start + 30_000;
+  const deadline = start + 60_000;
 
   while (Date.now() < deadline) {
-    const inv = await gatewayToolInvoke('sessions_history', { sessionKey: SESSION_KEY, limit: 30 });
+    let inv;
+    try {
+      inv = await gatewayToolInvoke('sessions_history', { sessionKey: SESSION_KEY, limit: 30 });
+    } catch (histErr) {
+      const msg = histErr instanceof Error ? histErr.message : String(histErr);
+      console.error(`[DIAG][/api/chat-bridge] sessions_history FAILED: ${msg}`);
+      return jsonError(500, { code: 'internal_error', message: 'sessions_history failed', details: msg });
+    }
     const hist = extractToolJson<SessionsHistory>(inv);
     const txt = pickLatestAssistantText(hist, start);
     if (txt) {
       return Response.json(
-        {
-          ok: true,
-          reply: txt,
-          sessionKey: SESSION_KEY,
-        },
+        { ok: true, reply: txt, sessionKey: SESSION_KEY },
         { headers: { 'Cache-Control': 'no-store' } }
       );
     }
 
-    // backoff
-    await new Promise((r) => setTimeout(r, 350));
+    await new Promise((r) => setTimeout(r, 500));
   }
 
   return jsonError(504, { code: 'timeout', message: 'Timed out waiting for response' });

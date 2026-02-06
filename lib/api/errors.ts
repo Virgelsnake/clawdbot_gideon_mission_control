@@ -4,6 +4,7 @@ export type ApiErrorCode =
   | 'gateway_error'
   | 'bad_request'
   | 'timeout'
+  | 'config_write_failed'
   | 'internal_error';
 
 export type ApiErrorBody = {

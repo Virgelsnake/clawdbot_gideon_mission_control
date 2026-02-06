@@ -43,10 +43,11 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('idle');
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Derive display status from heartbeat freshness
-  const updateDisplayStatus = useCallback((agentStatus: AgentStatus, heartbeat: string | undefined) => {
+  // Derive display status from heartbeat freshness + gateway connectivity
+  const updateDisplayStatus = useCallback((agentStatus: AgentStatus, heartbeat: string | undefined, gatewayConnected: boolean) => {
     if (isHeartbeatStale(heartbeat)) {
-      setDisplayStatus('disconnected');
+      // Heartbeat stale, but if gateway is reachable the system is still operational
+      setDisplayStatus(gatewayConnected ? agentStatus : 'disconnected');
     } else {
       setDisplayStatus(agentStatus);
     }
@@ -54,14 +55,15 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
   // Apply agent state from Supabase (used by both initial fetch and Realtime)
   const applyAgentState = useCallback((state: AgentState) => {
+    console.log(`[DIAG][AgentContext] applyAgentState: status=${state.status}, model=${state.currentModel}, modelList=[${state.modelList.join(',')}], heartbeat=${state.lastHeartbeat}`);
     setStatusState(state.status);
     setCurrentModelState(state.currentModel);
     if (state.modelList.length > 0) {
       setModelList(state.modelList);
     }
     setLastHeartbeat(state.lastHeartbeat);
-    updateDisplayStatus(state.status, state.lastHeartbeat);
-  }, [updateDisplayStatus]);
+    updateDisplayStatus(state.status, state.lastHeartbeat, connected);
+  }, [updateDisplayStatus, connected]);
 
   const setStatus = useCallback((newStatus: AgentStatus) => {
     setStatusState(newStatus);
@@ -71,17 +73,24 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const refresh = useCallback(async () => {
     try {
       const [modelsRes, statusRes] = await Promise.all([fetchModels(), fetchStatus()]);
-      setConnected(Boolean(statusRes?.connected));
+      const isConnected = Boolean(statusRes?.connected);
+      console.log(`[DIAG][AgentContext] refresh: connected=${isConnected}, modelsSource=${modelsRes?.source}, models=[${(modelsRes?.models || []).map(m => m.id).join(',')}], statusOk=${statusRes?.ok}`);
+      setConnected(isConnected);
 
       const ids = (modelsRes?.models || []).map((m) => m.id).filter(Boolean);
       if (ids.length) {
         setModelList(ids);
         setCurrentModelState((prev) => (ids.includes(prev) ? prev : ids[0]));
       }
-    } catch {
+
+      // Re-evaluate display status with fresh connectivity info
+      updateDisplayStatus(status, lastHeartbeat, isConnected);
+    } catch (err) {
+      console.error(`[DIAG][AgentContext] refresh FAILED:`, err);
       setConnected(false);
+      updateDisplayStatus(status, lastHeartbeat, false);
     }
-  }, []);
+  }, [status, lastHeartbeat, updateDisplayStatus]);
 
   // On mount: fetch initial agent state from Supabase + subscribe to Realtime
   useEffect(() => {
@@ -103,13 +112,13 @@ export function AgentProvider({ children }: AgentProviderProps) {
   // Periodic heartbeat staleness check (re-evaluate every 10s)
   useEffect(() => {
     heartbeatTimerRef.current = setInterval(() => {
-      updateDisplayStatus(status, lastHeartbeat);
+      updateDisplayStatus(status, lastHeartbeat, connected);
     }, 10_000);
 
     return () => {
       if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
     };
-  }, [status, lastHeartbeat, updateDisplayStatus]);
+  }, [status, lastHeartbeat, connected, updateDisplayStatus]);
 
   // Gateway connectivity polling (supplementary, less frequent)
   useEffect(() => {
@@ -129,8 +138,15 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
   const setCurrentModel = useCallback(
     async (model: string) => {
+      console.log(`[DIAG][AgentContext] setCurrentModel called: model=${model}`);
       setCurrentModelState(model);
-      await requestModelSwitch(model);
+      try {
+        const result = await requestModelSwitch(model);
+        console.log(`[DIAG][AgentContext] requestModelSwitch result:`, result);
+      } catch (err) {
+        console.error(`[DIAG][AgentContext] requestModelSwitch FAILED:`, err);
+        throw err;
+      }
       // On success, Supabase agent_state is updated server-side.
       // Realtime subscription will propagate the change to all clients.
     },

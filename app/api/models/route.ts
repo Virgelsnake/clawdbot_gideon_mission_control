@@ -1,5 +1,10 @@
-import { jsonError, safeReadText } from '@/lib/api/errors';
-import { gatewayFetch, TimeoutError } from '@/lib/gateway/client';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { readFile } from 'fs/promises';
+
+const execAsync = promisify(exec);
+const OPENCLAW_CONFIG = '/Users/gideon/.openclaw/openclaw.json';
+const OPENCLAW_CLI = '/usr/local/bin/openclaw';
 
 // Curated model list fallback (aliases are preferred for stability).
 const FALLBACK_MODELS = [
@@ -9,79 +14,50 @@ const FALLBACK_MODELS = [
 
 export async function GET() {
   try {
-    // Try to discover from gateway if it supports /v1/models.
-    const res = await gatewayFetch('/v1/models', { method: 'GET' }, 10_000);
-
-    if (!res.ok) {
-      const text = await safeReadText(res);
-      return Response.json(
-        {
-          ok: true,
-          source: 'fallback',
-          warning: {
-            code: 'gateway_error',
-            message: 'Gateway /v1/models returned an error; using fallback list',
-            details: text,
-          },
-          models: FALLBACK_MODELS,
-        },
-        { headers: { 'Cache-Control': 'no-store' } }
-      );
-    }
-
-    let data: unknown;
+    // Use the OpenClaw CLI to discover models (gateway uses WebSocket, not HTTP REST)
+    // Strategy 1: Try CLI with full path
+    let models: Array<{ id: string; label: string }> = [];
     try {
-      data = await res.json();
+      const { stdout } = await execAsync(`${OPENCLAW_CLI} models list 2>/dev/null`, {
+        timeout: 10_000,
+        env: { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH || ''}` },
+      });
+      const modelPattern = /^([a-zA-Z0-9_-]+\/[a-zA-Z0-9._:-]+)/gm;
+      let match: RegExpExecArray | null;
+      while ((match = modelPattern.exec(stdout)) !== null) {
+        const id = match[1].trim();
+        if (id) models.push({ id, label: id });
+      }
     } catch {
-      return Response.json(
-        {
-          ok: true,
-          source: 'fallback',
-          warning: {
-            code: 'gateway_error',
-            message: 'Gateway /v1/models did not return JSON; using fallback list',
-          },
-          models: FALLBACK_MODELS,
-        },
-        { headers: { 'Cache-Control': 'no-store' } }
-      );
+      // CLI failed — fall through to config file
     }
 
-    // Normalize to an array of {id,label}
-    const raw = (data as { data?: unknown })?.data;
-
-    const items: Array<{ id: string; label: string }> = Array.isArray(raw)
-      ? raw
-          .map((m: unknown) => {
-            const mm = typeof m === 'object' && m !== null ? (m as Record<string, unknown>) : {};
-            const id = String(mm.id ?? mm.model ?? '').trim();
-            return { id, label: id };
-          })
-          .filter((m) => m.id)
-      : FALLBACK_MODELS;
+    // Strategy 2: Read config file directly
+    if (models.length === 0) {
+      try {
+        const raw = await readFile(OPENCLAW_CONFIG, 'utf-8');
+        const config = JSON.parse(raw) as { agents?: { defaults?: { models?: Record<string, unknown> } } };
+        const configModels = config?.agents?.defaults?.models;
+        if (configModels && typeof configModels === 'object') {
+          for (const id of Object.keys(configModels)) {
+            if (id) models.push({ id, label: id });
+          }
+        }
+      } catch {
+        // Config file unavailable
+      }
+    }
 
     return Response.json(
       {
         ok: true,
-        source: 'gateway',
-        models: items.length ? items : FALLBACK_MODELS,
+        source: models.length > 0 ? 'gateway' : 'fallback',
+        models: models.length > 0 ? models : FALLBACK_MODELS,
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );
-  } catch (err: unknown) {
-    if (err instanceof TimeoutError) {
-      return jsonError(504, { code: 'timeout', message: 'Gateway request timed out' });
-    }
-
-    if (err instanceof Error && err.message === 'MISSING_GATEWAY_TOKEN') {
-      return jsonError(500, {
-        code: 'missing_config',
-        message: 'Server is missing CLAWDBOT_GATEWAY_TOKEN',
-      });
-    }
-
-    // If the gateway is unreachable entirely, still return a fallback list
-    // so the UI can render.
+  } catch {
+    // CLI unavailable or timed out — return fallback list so the UI can render
     return Response.json(
       {
         ok: true,

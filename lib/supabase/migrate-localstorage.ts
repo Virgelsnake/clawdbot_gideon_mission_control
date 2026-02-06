@@ -95,14 +95,16 @@ export async function migrateLocalStorageToSupabase(): Promise<{
     const rows = localIdeas.map((i) => ({
       content: i.content,
       archived: i.archived ?? false,
-      converted_to_task_id: i.convertedToTaskId ?? null,
+      // Don't migrate converted_to_task_id — old localStorage task IDs
+      // won't match the new Supabase-generated UUIDs (FK constraint)
+      converted_to_task_id: null,
       archived_at: i.archivedAt ? new Date(i.archivedAt).toISOString() : null,
       created_at: new Date(i.createdAt).toISOString(),
     }));
 
     const { error } = await supabase.from('ideas').insert(rows);
     if (error) {
-      console.error('migrate-localstorage: failed to insert ideas:', error);
+      console.error('migrate-localstorage: failed to insert ideas:', error.message, error.code, error.details);
       // Tasks already inserted — don't roll back, just log
     } else {
       migratedIdeas = rows.length;

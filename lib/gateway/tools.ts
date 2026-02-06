@@ -12,8 +12,10 @@ export async function gatewayToolInvoke(
   tool: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args: Record<string, any>,
-  sessionKey?: string
+  sessionKey?: string,
+  timeoutMs = 60_000
 ): Promise<ToolInvokeResponse> {
+  console.log(`[DIAG][gatewayToolInvoke] tool=${tool}, timeout=${timeoutMs}, args=${JSON.stringify(args).slice(0, 200)}`);
   const res = await gatewayFetch('/tools/invoke', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -23,7 +25,20 @@ export async function gatewayToolInvoke(
       args,
       ...(sessionKey ? { sessionKey } : {}),
     }),
-  });
+  }, timeoutMs);
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`[DIAG][gatewayToolInvoke] Non-OK response: status=${res.status}, body-snippet=${text.slice(0, 200)}`);
+    throw new Error(`Tool invoke failed: ${res.status} ${text.slice(0, 100)}`);
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('json')) {
+    const text = await res.text();
+    console.error(`[DIAG][gatewayToolInvoke] Non-JSON content-type: ${contentType}, body-snippet=${text.slice(0, 200)}`);
+    throw new Error(`Tool invoke returned non-JSON: content-type=${contentType}`);
+  }
 
   return res.json();
 }

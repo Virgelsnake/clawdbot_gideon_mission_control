@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       const text = await safeReadText(res);
+      console.error(`[DIAG][/api/chat] Gateway error: status=${res.status}, content-type=${res.headers.get('content-type')}, body-snippet=${String(text).slice(0, 200)}`);
       return jsonError(res.status, {
         code: 'gateway_error',
         message: 'Gateway returned an error',

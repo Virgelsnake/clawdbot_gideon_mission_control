@@ -1,18 +1,16 @@
 import { NextRequest } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { readFile, writeFile } from 'fs/promises';
 import { createClient } from '@supabase/supabase-js';
 
 import { jsonError } from '@/lib/api/errors';
 
-const execAsync = promisify(exec);
+const OPENCLAW_CONFIG = '/Users/gideon/.openclaw/openclaw.json';
 
 function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
 // Allowlist pattern: alphanumeric, hyphens, dots, colons, slashes, underscores
@@ -43,68 +41,94 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // --- Execute CLI command ---
+  // --- Update OpenClaw config file directly ---
+  // The openclaw CLI hangs when spawned from Node.js child_process, so we
+  // write to the config file directly (same thing the CLI does internally).
   try {
-    const { stdout, stderr } = await execAsync(`openclaw models set ${model}`, {
-      timeout: 15_000,
-      env: { ...process.env },
+    const raw = await readFile(OPENCLAW_CONFIG, 'utf-8');
+    const config = JSON.parse(raw);
+
+    // Validate the model exists in the configured models list
+    const configuredModels = Object.keys(config?.agents?.defaults?.models ?? {});
+    if (configuredModels.length > 0 && !configuredModels.includes(model)) {
+      return jsonError(400, {
+        code: 'bad_request',
+        message: `Model "${model}" is not in the configured models list. Available: ${configuredModels.join(', ')}`,
+      });
+    }
+
+    // Set the primary model
+    if (!config.agents) config.agents = {};
+    if (!config.agents.defaults) config.agents.defaults = {};
+    if (!config.agents.defaults.model) config.agents.defaults.model = {};
+    config.agents.defaults.model.primary = model;
+
+    await writeFile(OPENCLAW_CONFIG, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return jsonError(500, {
+      code: 'config_write_failed',
+      message: 'Failed to update OpenClaw config file',
+      details: msg,
     });
+  }
 
-    // openclaw CLI may write warnings to stderr even on success — only treat non-zero exit as failure
-    // (promisify(exec) rejects on non-zero exit, so reaching here means exit code 0)
+  // --- Read configured model list from config for Supabase sync ---
+  let configuredModels: string[] = [];
+  try {
+    const raw = await readFile(OPENCLAW_CONFIG, 'utf-8');
+    const config = JSON.parse(raw);
+    configuredModels = Object.keys(config?.agents?.defaults?.models ?? {});
+  } catch {
+    // Already wrote successfully above, so this shouldn't fail
+  }
 
-    // --- Update Supabase agent_state ---
-    const { error: dbError } = await getSupabaseAdmin()
+  // --- Update Supabase agent_state ---
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    return Response.json(
+      { ok: true, model, warning: 'Config updated but Supabase credentials not configured' },
+      { status: 200, headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+
+  try {
+    const updatePayload: Record<string, unknown> = {
+      current_model: model,
+      updated_at: new Date().toISOString(),
+    };
+    if (configuredModels.length > 0) {
+      updatePayload.model_list = configuredModels;
+    }
+
+    const { error: dbError } = await supabase
       .from('agent_state')
-      .update({
-        current_model: model,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('agent_id', 'gideon');
 
     if (dbError) {
-      // CLI succeeded but DB update failed — report partial success
+      // Config updated but DB update failed — report partial success
       return Response.json(
         {
           ok: true,
           model,
-          warning: 'Model set via CLI but failed to update database',
+          warning: 'Config updated but failed to update database',
           dbError: dbError.message,
-          stdout: stdout.trim(),
         },
         { status: 200, headers: { 'Cache-Control': 'no-store' } }
       );
     }
 
     return Response.json(
-      {
-        ok: true,
-        model,
-        stdout: stdout.trim(),
-        stderr: stderr.trim() || undefined,
-      },
+      { ok: true, model },
       { status: 200, headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (err: unknown) {
-    // exec rejects on non-zero exit code or timeout
-    const errObj = err as Record<string, unknown>;
-    const isTimeout = errObj.killed === true;
-
-    if (isTimeout) {
-      return jsonError(504, {
-        code: 'timeout',
-        message: 'openclaw CLI timed out (15s)',
-      });
-    }
-
-    // Non-zero exit — extract stderr
-    const execErr = err as { stderr?: string; message?: string };
-    const detail = execErr.stderr?.trim() || execErr.message || String(err);
-
+    const msg = err instanceof Error ? err.message : String(err);
     return jsonError(500, {
       code: 'internal_error',
-      message: 'openclaw models set failed',
-      details: detail,
+      message: 'Config updated but Supabase update failed',
+      details: msg,
     });
   }
 }

@@ -32,7 +32,7 @@ export function ChatInput({ onSendMessage }: ChatInputProps) {
   };
 
   return (
-    <div className="flex items-end gap-2 border-t border-border/50 px-3 py-2.5">
+    <div className="flex items-end gap-2 border-t border-border/50 px-3 py-2.5 mb-12">
       <Input
         value={input}
         onChange={(e) => setInput(e.target.value)}
