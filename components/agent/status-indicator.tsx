@@ -92,13 +92,6 @@ export function StatusIndicator() {
                   {config.label}
                 </span>
               </div>
-              <span className="text-[11px] text-muted-foreground leading-tight pl-3">
-                {connected
-                  ? currentModel
-                  : displayStatus === 'disconnected'
-                    ? 'Disconnected'
-                    : 'Gateway offline'}
-              </span>
             </div>
           </div>
         </TooltipTrigger>

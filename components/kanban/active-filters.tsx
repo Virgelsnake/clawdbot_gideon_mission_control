@@ -1,6 +1,7 @@
 'use client';
 
 import { useTask } from '@/contexts/task-context';
+import { useSettings } from '@/contexts/settings-context';
 import type { TaskPriority, DueDateFilter } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const DUE_DATE_LABELS: Record<Exclude<DueDateFilter, null>, string> = {
 
 export function ActiveFilters() {
   const { filters, setFilter, clearFilters } = useTask();
+  const { settings } = useSettings();
 
   const hasActiveFilters =
     filters.search ||
@@ -89,23 +91,31 @@ export function ActiveFilters() {
         </Badge>
       )}
 
-      {filters.labels.map(label => (
-        <Badge key={label} variant="secondary" className="gap-1 pl-2 pr-1 capitalize">
-          Label: {label}
-          <button
-            onClick={() =>
-              setFilter(
-                'labels',
-                filters.labels.filter(l => l !== label)
-              )
-            }
-            className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
-            title={`Remove ${label} label filter`}
+      {filters.labels.map(label => {
+        const labelConfig = settings.labels.find(l => l.name === label);
+        return (
+          <Badge
+            key={label}
+            variant="secondary"
+            className="gap-1 pl-2 pr-1 capitalize"
+            style={labelConfig ? { backgroundColor: labelConfig.color + '20', color: labelConfig.color } : undefined}
           >
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
-      ))}
+            Label: {label}
+            <button
+              onClick={() =>
+                setFilter(
+                  'labels',
+                  filters.labels.filter(l => l !== label)
+                )
+              }
+              className="ml-1 rounded-full p-0.5 hover:bg-black/10"
+              title={`Remove ${label} label filter`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        );
+      })}
 
       {filters.dueDateFilter && (
         <Badge variant="secondary" className="gap-1 pl-2 pr-1">

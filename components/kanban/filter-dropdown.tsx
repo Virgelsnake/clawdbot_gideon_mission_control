@@ -1,6 +1,7 @@
 'use client';
 
 import { useTask } from '@/contexts/task-context';
+import { useSettings } from '@/contexts/settings-context';
 import type { TaskPriority, DueDateFilter } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +24,6 @@ const PRIORITIES: { id: TaskPriority; label: string; color: string }[] = [
   { id: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-700 border-red-200' },
 ];
 
-const AVAILABLE_LABELS = ['bug', 'feature', 'enhancement', 'docs', 'design', 'research'];
 
 const DUE_DATE_OPTIONS: { value: DueDateFilter; label: string }[] = [
   { value: 'overdue', label: 'Overdue' },
@@ -34,6 +34,7 @@ const DUE_DATE_OPTIONS: { value: DueDateFilter; label: string }[] = [
 
 export function FilterDropdown() {
   const { filters, setFilter, clearFilters } = useTask();
+  const { settings } = useSettings();
 
   const hasActiveFilters =
     filters.search ||
@@ -125,12 +126,38 @@ export function FilterDropdown() {
               <User className="h-3 w-3" />
               Assignee
             </Label>
-            <Input
-              placeholder="Filter by assignee..."
-              value={filters.assignee}
-              onChange={e => setFilter('assignee', e.target.value)}
-              className="h-8 text-sm"
-            />
+            {settings.teamMembers.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {settings.teamMembers.map(member => (
+                  <button
+                    key={member.id}
+                    onClick={() => setFilter('assignee', filters.assignee === member.name ? '' : member.name)}
+                    className={cn(
+                      'px-2 py-1 text-xs rounded-md border transition-all flex items-center gap-1.5',
+                      filters.assignee === member.name
+                        ? 'border-current'
+                        : 'bg-muted text-muted-foreground border-transparent hover:border-border'
+                    )}
+                    style={filters.assignee === member.name ? { backgroundColor: member.color + '20', color: member.color, borderColor: member.color } : undefined}
+                  >
+                    <span
+                      className="h-4 w-4 rounded-full text-[8px] font-bold text-white flex items-center justify-center"
+                      style={{ backgroundColor: member.color }}
+                    >
+                      {member.initials}
+                    </span>
+                    {member.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <Input
+                placeholder="Filter by assignee..."
+                value={filters.assignee}
+                onChange={e => setFilter('assignee', e.target.value)}
+                className="h-8 text-sm"
+              />
+            )}
           </div>
 
           {/* Labels */}
@@ -140,18 +167,19 @@ export function FilterDropdown() {
               Labels
             </Label>
             <div className="flex flex-wrap gap-1">
-              {AVAILABLE_LABELS.map(label => (
+              {settings.labels.map(label => (
                 <button
-                  key={label}
-                  onClick={() => toggleLabel(label)}
+                  key={label.id}
+                  onClick={() => toggleLabel(label.name)}
                   className={cn(
                     'px-2 py-1 text-xs rounded-md border transition-all capitalize',
-                    filters.labels.includes(label)
-                      ? 'bg-primary text-primary-foreground border-primary'
+                    filters.labels.includes(label.name)
+                      ? 'border-current'
                       : 'bg-muted text-muted-foreground border-transparent hover:border-border'
                   )}
+                  style={filters.labels.includes(label.name) ? { backgroundColor: label.color + '20', color: label.color, borderColor: label.color } : undefined}
                 >
-                  {label}
+                  {label.name}
                 </button>
               ))}
             </div>

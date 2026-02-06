@@ -7,6 +7,8 @@ import { MainContent } from '@/components/layout/main-content';
 import { ChatProvider } from '@/contexts/chat-context';
 import { TaskProvider } from '@/contexts/task-context';
 import { ChatPanel } from '@/components/chat/chat-panel';
+import { SettingsProvider } from '@/contexts/settings-context';
+import { SettingsPanel } from '@/components/settings/settings-panel';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
@@ -41,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} h-screen overflow-hidden bg-background font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
@@ -51,16 +53,19 @@ export default function RootLayout({
         >
           <AgentProvider>
             <ChatProvider>
-              <TaskProvider>
-                <div className="flex min-h-screen flex-col">
-                  <Header />
-                  <div className="flex flex-1 overflow-hidden">
-                    <MainContent>{children}</MainContent>
-                    <ChatPanel />
+              <SettingsProvider>
+                <TaskProvider>
+                  <div className="flex h-screen flex-col overflow-hidden">
+                    <Header />
+                    <div className="flex flex-1 overflow-hidden">
+                      <MainContent>{children}</MainContent>
+                      <ChatPanel />
+                    </div>
                   </div>
-                </div>
-                <Toaster />
-              </TaskProvider>
+                  <SettingsPanel />
+                  <Toaster />
+                </TaskProvider>
+              </SettingsProvider>
             </ChatProvider>
           </AgentProvider>
         </ThemeProvider>

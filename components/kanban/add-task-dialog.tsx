@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTask } from '@/contexts/task-context';
+import { useSettings } from '@/contexts/settings-context';
 import { Button } from '@/components/ui/button';
 import { Plus, Flag, Calendar, User, Tag } from 'lucide-react';
 import {
@@ -45,16 +46,6 @@ const PRIORITIES: { id: TaskPriority; label: string; color: string }[] = [
   { id: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-700' },
 ];
 
-const AVAILABLE_LABELS = ['bug', 'feature', 'enhancement', 'docs', 'design', 'research'];
-
-const LABEL_COLORS: Record<string, string> = {
-  bug: 'bg-red-100 text-red-700 border-red-200',
-  feature: 'bg-blue-100 text-blue-700 border-blue-200',
-  enhancement: 'bg-purple-100 text-purple-700 border-purple-200',
-  docs: 'bg-green-100 text-green-700 border-green-200',
-  design: 'bg-pink-100 text-pink-700 border-pink-200',
-  research: 'bg-amber-100 text-amber-700 border-amber-200',
-};
 
 export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }: AddTaskDialogProps) {
   const [open, setOpen] = useState(false);
@@ -66,6 +57,7 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
   const [dueDate, setDueDate] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const { addTask } = useTask();
+  const { settings } = useSettings();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -204,13 +196,37 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
                   <User className="h-3.5 w-3.5" />
                   Assignee
                 </Label>
-                <Input
-                  id="assignee"
-                  value={assignee}
-                  onChange={(e) => setAssignee(e.target.value)}
-                  placeholder="Name"
-                  className="h-10"
-                />
+                {settings.teamMembers.length > 0 ? (
+                  <Select value={assignee} onValueChange={setAssignee}>
+                    <SelectTrigger id="assignee">
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {settings.teamMembers.map(m => (
+                        <SelectItem key={m.id} value={m.name}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-4 w-4 rounded-full text-[8px] font-bold text-white flex items-center justify-center"
+                              style={{ backgroundColor: m.color }}
+                            >
+                              {m.initials}
+                            </span>
+                            {m.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="assignee"
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value)}
+                    placeholder="Name"
+                    className="h-10"
+                  />
+                )}
               </div>
 
               {/* Due Date */}
@@ -236,18 +252,19 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
                 Labels
               </Label>
               <div className="flex flex-wrap gap-2">
-                {AVAILABLE_LABELS.map((label) => (
+                {settings.labels.map((label) => (
                   <button
-                    key={label}
+                    key={label.id}
                     type="button"
-                    onClick={() => toggleLabel(label)}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-all ${
-                      selectedLabels.includes(label)
-                        ? LABEL_COLORS[label]
-                        : 'bg-muted text-muted-foreground border-transparent hover:border-border'
-                    }`}
+                    onClick={() => toggleLabel(label.name)}
+                    className="px-2.5 py-1 text-xs font-medium rounded-full border transition-all capitalize"
+                    style={
+                      selectedLabels.includes(label.name)
+                        ? { backgroundColor: label.color + '20', color: label.color, borderColor: label.color }
+                        : undefined
+                    }
                   >
-                    {label}
+                    {label.name}
                   </button>
                 ))}
               </div>

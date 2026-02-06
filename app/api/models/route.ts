@@ -1,68 +1,67 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { readFile } from 'fs/promises';
+import { getAllModels, getConfiguredModels } from '@/lib/gateway/model-cache';
 
-const execAsync = promisify(exec);
-const OPENCLAW_CONFIG = '/Users/gideon/.openclaw/openclaw.json';
-const OPENCLAW_CLI = '/usr/local/bin/openclaw';
-
-// Curated model list fallback (aliases are preferred for stability).
-const FALLBACK_MODELS = [
-  { id: 'default', label: 'default' },
-  { id: 'plan', label: 'plan' },
-];
+export type ModelEntry = {
+  id: string;
+  label: string;
+  configured: boolean;
+  tags: string;
+};
 
 export async function GET() {
   try {
-    // Use the OpenClaw CLI to discover models (gateway uses WebSocket, not HTTP REST)
-    // Strategy 1: Try CLI with full path
-    let models: Array<{ id: string; label: string }> = [];
-    try {
-      const { stdout } = await execAsync(`${OPENCLAW_CLI} models list 2>/dev/null`, {
-        timeout: 10_000,
-        env: { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH || ''}` },
+    // Gateway config is the source of truth for what's actually usable
+    const { configuredModels, primaryModel } = await getConfiguredModels();
+
+    // CLI gives the full catalogue (cached, may be empty on first call)
+    const { models: allModels, source } = await getAllModels();
+
+    // Build entries: configured models first, then the rest from CLI
+    const seen = new Set<string>();
+    const entries: ModelEntry[] = [];
+
+    // Always include configured models (even if CLI hasn't loaded yet)
+    for (const id of configuredModels) {
+      seen.add(id);
+      const cliMatch = allModels.find((m) => m.id === id);
+      entries.push({
+        id,
+        label: cliMatch?.name || id,
+        configured: true,
+        tags: cliMatch?.tags.join(',') || 'configured',
       });
-      const modelPattern = /^([a-zA-Z0-9_-]+\/[a-zA-Z0-9._:-]+)/gm;
-      let match: RegExpExecArray | null;
-      while ((match = modelPattern.exec(stdout)) !== null) {
-        const id = match[1].trim();
-        if (id) models.push({ id, label: id });
-      }
-    } catch {
-      // CLI failed — fall through to config file
     }
 
-    // Strategy 2: Read config file directly
-    if (models.length === 0) {
-      try {
-        const raw = await readFile(OPENCLAW_CONFIG, 'utf-8');
-        const config = JSON.parse(raw) as { agents?: { defaults?: { models?: Record<string, unknown> } } };
-        const configModels = config?.agents?.defaults?.models;
-        if (configModels && typeof configModels === 'object') {
-          for (const id of Object.keys(configModels)) {
-            if (id) models.push({ id, label: id });
-          }
-        }
-      } catch {
-        // Config file unavailable
-      }
+    // Add remaining CLI models marked as not configured
+    for (const m of allModels) {
+      if (seen.has(m.id)) continue;
+      if (!m.available) continue; // skip models without valid auth
+      seen.add(m.id);
+      entries.push({
+        id: m.id,
+        label: m.name || m.id,
+        configured: false,
+        tags: m.tags.join(','),
+      });
     }
 
     return Response.json(
       {
         ok: true,
-        source: models.length > 0 ? 'gateway' : 'fallback',
-        models: models.length > 0 ? models : FALLBACK_MODELS,
+        source,
+        currentModel: primaryModel,
+        configuredModels,
+        models: entries.length > 0 ? entries : [{ id: 'default', label: 'default', configured: false, tags: '' }],
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch {
-    // CLI unavailable or timed out — return fallback list so the UI can render
     return Response.json(
       {
         ok: true,
         source: 'fallback',
-        models: FALLBACK_MODELS,
+        currentModel: 'default',
+        configuredModels: [],
+        models: [{ id: 'default', label: 'default', configured: false, tags: '' }],
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );

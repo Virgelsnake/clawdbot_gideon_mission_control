@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils';
 import type { Message } from '@/types';
 import { User, Bot } from 'lucide-react';
+import { useSettings } from '@/contexts/settings-context';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -79,6 +80,7 @@ const markdownComponents: Components = {
 };
 
 export function MessageBubble({ message, showDateHeader }: MessageBubbleProps) {
+  const { settings } = useSettings();
   const isUser = message.role === 'user';
 
   return (
@@ -109,7 +111,7 @@ export function MessageBubble({ message, showDateHeader }: MessageBubbleProps) {
         <div className={cn('flex flex-col gap-0.5 min-w-0 flex-1', isUser ? 'items-end' : 'items-start')}>
           <div className={cn('flex items-center gap-1.5', isUser ? 'flex-row-reverse' : 'flex-row')}>
             <span className="text-xs font-medium text-foreground/80">
-              {isUser ? 'You' : 'Gideon'}
+              {isUser ? settings.chat.displayName : 'Gideon'}
             </span>
             <span className="text-[10px] text-muted-foreground/50">
               {formatTime(message.timestamp)}

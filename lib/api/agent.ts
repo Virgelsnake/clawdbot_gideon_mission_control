@@ -9,8 +9,10 @@ export type StatusResponse = {
 
 export type ModelsResponse = {
   ok: boolean;
-  source?: 'gateway' | 'fallback';
-  models: Array<{ id: string; label: string }>;
+  source?: string;
+  currentModel?: string;
+  configuredModels?: string[];
+  models: Array<{ id: string; label: string; configured: boolean; tags: string }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   warning?: any;
 };
@@ -46,6 +48,28 @@ export async function requestModelSwap(model: string) {
   if (!res.ok) {
     throw new Error(data?.message || 'Model swap failed');
   }
+  return data;
+}
+
+export type ModelHealthEntry = {
+  id: string;
+  alive: boolean;
+  latencyMs: number | null;
+  error?: string;
+};
+
+export type ModelHealthResponse = {
+  ok: boolean;
+  models: ModelHealthEntry[];
+};
+
+export async function fetchModelHealth(): Promise<ModelHealthResponse> {
+  const res = await fetch('/api/models/health', {
+    method: 'GET',
+    headers: { 'Cache-Control': 'no-store' },
+  });
+
+  const data = await res.json();
   return data;
 }
 

@@ -22,8 +22,10 @@ import {
   LayoutGrid,
   HelpCircle,
 } from 'lucide-react';
+import { useSettings } from '@/contexts/settings-context';
 
 export function Header() {
+  const { openSettings } = useSettings();
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-12 items-center justify-between px-4 lg:px-6">
@@ -87,7 +89,7 @@ export function Header() {
             <HelpCircle className="h-5 w-5" />
           </Button>
 
-          <Button variant="ghost" size="icon" className="hidden sm:flex">
+          <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={openSettings}>
             <Settings className="h-5 w-5" />
           </Button>
 
