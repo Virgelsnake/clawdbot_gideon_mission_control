@@ -1,14 +1,22 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import type { AgentStatus } from '@/types';
-import { fetchModels, fetchStatus, requestModelSwap } from '@/lib/api/agent';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
+import type { AgentStatus, AgentState } from '@/types';
+import { fetchModels, fetchStatus, requestModelSwitch } from '@/lib/api/agent';
+import { fetchAgentState, subscribeAgentState } from '@/lib/supabase/agent-state';
+
+// UI-only display status — extends AgentStatus with 'disconnected'
+export type DisplayStatus = AgentStatus | 'disconnected';
+
+const HEARTBEAT_TIMEOUT_MS = 60_000; // 60 seconds
 
 interface AgentContextValue {
   status: AgentStatus;
+  displayStatus: DisplayStatus;
   connected: boolean;
   currentModel: string;
   modelList: string[];
+  lastHeartbeat: string | undefined;
   setStatus: (status: AgentStatus) => void;
   setCurrentModel: (model: string) => Promise<void>;
   refresh: () => Promise<void>;
@@ -20,16 +28,46 @@ interface AgentProviderProps {
   children: ReactNode;
 }
 
+function isHeartbeatStale(lastHeartbeat: string | undefined): boolean {
+  if (!lastHeartbeat) return true;
+  const elapsed = Date.now() - new Date(lastHeartbeat).getTime();
+  return elapsed > HEARTBEAT_TIMEOUT_MS;
+}
+
 export function AgentProvider({ children }: AgentProviderProps) {
   const [status, setStatusState] = useState<AgentStatus>('idle');
   const [connected, setConnected] = useState<boolean>(false);
   const [modelList, setModelList] = useState<string[]>(['default']);
   const [currentModel, setCurrentModelState] = useState<string>('default');
+  const [lastHeartbeat, setLastHeartbeat] = useState<string | undefined>(undefined);
+  const [displayStatus, setDisplayStatus] = useState<DisplayStatus>('idle');
+  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Derive display status from heartbeat freshness
+  const updateDisplayStatus = useCallback((agentStatus: AgentStatus, heartbeat: string | undefined) => {
+    if (isHeartbeatStale(heartbeat)) {
+      setDisplayStatus('disconnected');
+    } else {
+      setDisplayStatus(agentStatus);
+    }
+  }, []);
+
+  // Apply agent state from Supabase (used by both initial fetch and Realtime)
+  const applyAgentState = useCallback((state: AgentState) => {
+    setStatusState(state.status);
+    setCurrentModelState(state.currentModel);
+    if (state.modelList.length > 0) {
+      setModelList(state.modelList);
+    }
+    setLastHeartbeat(state.lastHeartbeat);
+    updateDisplayStatus(state.status, state.lastHeartbeat);
+  }, [updateDisplayStatus]);
 
   const setStatus = useCallback((newStatus: AgentStatus) => {
     setStatusState(newStatus);
   }, []);
 
+  // Gateway connectivity check — supplementary signal
   const refresh = useCallback(async () => {
     try {
       const [modelsRes, statusRes] = await Promise.all([fetchModels(), fetchStatus()]);
@@ -38,7 +76,6 @@ export function AgentProvider({ children }: AgentProviderProps) {
       const ids = (modelsRes?.models || []).map((m) => m.id).filter(Boolean);
       if (ids.length) {
         setModelList(ids);
-        // Keep currentModel stable if it still exists; otherwise fall back.
         setCurrentModelState((prev) => (ids.includes(prev) ? prev : ids[0]));
       }
     } catch {
@@ -46,17 +83,43 @@ export function AgentProvider({ children }: AgentProviderProps) {
     }
   }, []);
 
-  // On mount: load models + connectivity.
+  // On mount: fetch initial agent state from Supabase + subscribe to Realtime
   useEffect(() => {
-    // Defer to avoid react-hooks/set-state-in-effect lint rule.
+    // Initial fetch
+    void fetchAgentState().then((state) => {
+      if (state) applyAgentState(state);
+    });
+
+    // Subscribe to Realtime changes
+    const channel = subscribeAgentState((state) => {
+      applyAgentState(state);
+    });
+
+    return () => {
+      void channel.unsubscribe();
+    };
+  }, [applyAgentState]);
+
+  // Periodic heartbeat staleness check (re-evaluate every 10s)
+  useEffect(() => {
+    heartbeatTimerRef.current = setInterval(() => {
+      updateDisplayStatus(status, lastHeartbeat);
+    }, 10_000);
+
+    return () => {
+      if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+    };
+  }, [status, lastHeartbeat, updateDisplayStatus]);
+
+  // Gateway connectivity polling (supplementary, less frequent)
+  useEffect(() => {
     const initial = setTimeout(() => {
       void refresh();
     }, 0);
 
-    // Poll status lightly so the UI can show disconnected state.
     const t = setInterval(() => {
       void refresh();
-    }, 15_000);
+    }, 30_000);
 
     return () => {
       clearTimeout(initial);
@@ -67,21 +130,20 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const setCurrentModel = useCallback(
     async (model: string) => {
       setCurrentModelState(model);
-      try {
-        await requestModelSwap(model);
-      } catch {
-        // If swap fails, we still keep the UI-selected model as the "requested" model.
-        // The chat may error if the gateway refuses.
-      }
+      await requestModelSwitch(model);
+      // On success, Supabase agent_state is updated server-side.
+      // Realtime subscription will propagate the change to all clients.
     },
     []
   );
 
   const value: AgentContextValue = {
     status,
+    displayStatus,
     connected,
     currentModel,
     modelList,
+    lastHeartbeat,
     setStatus,
     setCurrentModel,
     refresh,

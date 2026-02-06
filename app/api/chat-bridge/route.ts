@@ -3,8 +3,14 @@ import { NextRequest } from 'next/server';
 import { jsonError } from '@/lib/api/errors';
 import { gatewayToolInvoke, extractToolJson } from '@/lib/gateway/tools';
 
-const SESSION_KEY = process.env.CLAWDBOT_CANONICAL_SESSION_KEY || 'agent:main:main';
-const TELEGRAM_ECHO_TARGET = process.env.CLAWDBOT_TELEGRAM_ECHO_TARGET || '';
+const SESSION_KEY =
+  process.env.OPENCLAW_CANONICAL_SESSION_KEY ||
+  process.env.CLAWDBOT_CANONICAL_SESSION_KEY ||
+  'agent:main:main';
+const TELEGRAM_ECHO_TARGET =
+  process.env.OPENCLAW_TELEGRAM_ECHO_TARGET ||
+  process.env.CLAWDBOT_TELEGRAM_ECHO_TARGET ||
+  '';
 
 type SessionsHistory = {
   sessionKey: string;

@@ -1,11 +1,10 @@
 'use client';
 
-import { useAgent } from '@/contexts/agent-context';
-import type { AgentStatus } from '@/types';
+import { useAgent, type DisplayStatus } from '@/contexts/agent-context';
 import { cn } from '@/lib/utils';
 
 const statusConfig: Record<
-  AgentStatus,
+  DisplayStatus,
   { label: string; color: string; bg: string; pulse: boolean; emoji: string; ringColor: string }
 > = {
   idle: {
@@ -40,18 +39,34 @@ const statusConfig: Record<
     emoji: '🛑',
     ringColor: 'from-red-400/0 via-red-400/50 to-red-400/0',
   },
+  disconnected: {
+    label: 'Disconnected',
+    color: 'bg-orange-500',
+    bg: 'bg-orange-500/10',
+    pulse: false,
+    emoji: '🔌',
+    ringColor: 'from-orange-400/0 via-orange-400/40 to-orange-400/0',
+  },
 };
 
 export function StatusIndicator() {
-  const { status, currentModel, connected } = useAgent();
-  const config = statusConfig[status];
+  const { displayStatus, currentModel, connected, lastHeartbeat } = useAgent();
+  const config = statusConfig[displayStatus];
+
+  // Format last heartbeat for tooltip
+  const heartbeatLabel = lastHeartbeat
+    ? `Last heartbeat: ${new Date(lastHeartbeat).toLocaleTimeString()}`
+    : 'No heartbeat received';
 
   return (
     <div className="flex flex-col items-start gap-2">
-      <div className={cn(
-        'flex items-center gap-3 px-4 py-2 rounded-full',
-        config.bg
-      )}>
+      <div
+        className={cn(
+          'flex items-center gap-3 px-4 py-2 rounded-full',
+          config.bg
+        )}
+        title={`${config.label} · ${currentModel} · ${heartbeatLabel}`}
+      >
         {/* Emoji with pulsing gradient ring */}
         <div className="relative">
           {/* Pulsing gradient ring */}
@@ -78,7 +93,11 @@ export function StatusIndicator() {
         </div>
       </div>
       <span className="text-xs text-muted-foreground px-1">
-        {connected ? currentModel : 'Disconnected'}
+        {displayStatus === 'disconnected'
+          ? 'Disconnected'
+          : connected
+            ? currentModel
+            : 'Gateway offline'}
       </span>
     </div>
   );

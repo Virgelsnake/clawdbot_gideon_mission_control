@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
 import { Button } from '@/components/ui/button';
-import { PanelRightClose, MessageSquare } from 'lucide-react';
+import { PanelRightClose, MessageSquare, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat } from '@/contexts/chat-context';
 import { useAgent } from '@/contexts/agent-context';
@@ -15,7 +15,7 @@ import { ChatPanelHeader } from './chat-panel-header';
 export function ChatPanel() {
   const [isOpen, setIsOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const { messages, addMessage, appendToLastMessage, setStreaming } = useChat();
+  const { messages, addMessage, appendToLastMessage, setStreaming, persistLastAssistantMessage, clearMessages } = useChat();
   const { currentModel, setStatus } = useAgent();
 
   // Handle responsive detection
@@ -31,12 +31,12 @@ export function ChatPanel() {
 
   const handleSendMessage = useCallback(
     async (content: string) => {
-      // Add user message
-      addMessage('user', content);
-      
-      // Add empty assistant message that will be streamed
-      addMessage('assistant', '');
-      
+      // Add user message (persisted to Supabase)
+      await addMessage('user', content);
+
+      // Add empty assistant message placeholder (persisted after stream)
+      await addMessage('assistant', '');
+
       setStreaming(true);
       setStatus('thinking');
 
@@ -62,10 +62,12 @@ export function ChatPanel() {
         onComplete: () => {
           setStreaming(false);
           setStatus('idle');
+          // Persist the completed assistant message to Supabase
+          persistLastAssistantMessage();
         },
       });
     },
-    [messages, addMessage, appendToLastMessage, setStreaming, currentModel, setStatus]
+    [messages, addMessage, appendToLastMessage, setStreaming, persistLastAssistantMessage, currentModel, setStatus]
   );
 
   if (!isOpen) {
@@ -112,15 +114,31 @@ export function ChatPanel() {
               </span>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsOpen(false)}
-            aria-label="Close chat panel"
-            className="hover:bg-muted transition-colors"
-          >
-            <PanelRightClose className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  clearMessages();
+                  toast.success('Conversation cleared');
+                }}
+                aria-label="Clear conversation"
+                className="hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsOpen(false)}
+              aria-label="Close chat panel"
+              className="hover:bg-muted transition-colors"
+            >
+              <PanelRightClose className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <ChatPanelHeader />
         <div className={cn('flex-1 overflow-hidden p-3')}>

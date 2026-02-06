@@ -1,7 +1,7 @@
 'use client';
 
+import { useState } from 'react';
 import { useAgent } from '@/contexts/agent-context';
-import { useChat } from '@/contexts/chat-context';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,26 +9,35 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Cpu, Check } from 'lucide-react';
+import { Cpu, Check, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function ModelSelector() {
   const { currentModel, modelList, setCurrentModel } = useAgent();
-  const { addMessage } = useChat();
+  const [switching, setSwitching] = useState(false);
 
   const handleModelSelect = async (model: string) => {
-    if (model === currentModel) return;
+    if (model === currentModel || switching) return;
 
-    await setCurrentModel(model);
-    addMessage('assistant', `Requested model: ${model}`);
+    setSwitching(true);
+    try {
+      await setCurrentModel(model);
+      toast.success(`Switched to ${model}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Model switch failed';
+      toast.error('Model switch failed', { description: msg });
+    } finally {
+      setSwitching(false);
+    }
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 gap-2 px-2">
-          <Cpu className="h-4 w-4" />
+        <Button variant="ghost" size="sm" className="h-8 gap-2 px-2" disabled={switching}>
+          {switching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Cpu className="h-4 w-4" />}
           <span className="max-w-[120px] truncate text-xs">
-            {currentModel}
+            {switching ? 'Switching…' : currentModel}
           </span>
         </Button>
       </DropdownMenuTrigger>

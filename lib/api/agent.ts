@@ -48,3 +48,26 @@ export async function requestModelSwap(model: string) {
   }
   return data;
 }
+
+export type ModelSwitchResponse = {
+  ok: boolean;
+  model: string;
+  warning?: string;
+  stdout?: string;
+  stderr?: string;
+  dbError?: string;
+};
+
+export async function requestModelSwitch(model: string): Promise<ModelSwitchResponse> {
+  const res = await fetch('/api/model-switch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.message || 'Model switch failed');
+  }
+  return data as ModelSwitchResponse;
+}

@@ -1,13 +1,29 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import type { Task, KanbanColumn, Idea, TaskFilters, TaskPriority, DueDateFilter } from '@/types';
-import { loadTasks, saveTasks, loadIdeas, saveIdeas } from '@/lib/storage/tasks';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
+import type { Task, KanbanColumn, Idea, TaskFilters, DbTask, DbIdea } from '@/types';
+import { supabase } from '@/lib/supabase/client';
+import { dbTaskToTask } from '@/lib/supabase/mappers';
+import { dbIdeaToIdea } from '@/lib/supabase/mappers';
+import {
+  fetchTasks as sbFetchTasks,
+  createTask as sbCreateTask,
+  updateTask as sbUpdateTask,
+  deleteTask as sbDeleteTask,
+} from '@/lib/supabase/tasks';
+import {
+  fetchIdeas as sbFetchIdeas,
+  createIdea as sbCreateIdea,
+  updateIdea as sbUpdateIdea,
+  deleteIdea as sbDeleteIdea,
+} from '@/lib/supabase/ideas';
+import { migrateLocalStorageToSupabase } from '@/lib/supabase/migrate-localstorage';
 
 interface TaskContextValue {
   tasks: Task[];
   filteredTasks: Task[];
   ideas: Idea[];
+  loading: boolean;
   addTask: (title: string, description?: string, column?: KanbanColumn, priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => void;
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => void;
   deleteTask: (id: string) => void;
@@ -28,23 +44,10 @@ interface TaskProviderProps {
 }
 
 export function TaskProvider({ children }: TaskProviderProps) {
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    // Lazy initialization from localStorage
-    if (typeof window !== 'undefined') {
-      const stored = loadTasks();
-      return stored ?? [];
-    }
-    return [];
-  });
-
-  const [allIdeas, setAllIdeas] = useState<Idea[]>(() => {
-    // Lazy initialization from localStorage
-    if (typeof window !== 'undefined') {
-      const stored = loadIdeas();
-      return stored ?? [];
-    }
-    return [];
-  });
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [allIdeas, setAllIdeas] = useState<Idea[]>([]);
+  const [loading, setLoading] = useState(true);
+  const initialLoadDone = useRef(false);
 
   const [filters, setFilters] = useState<TaskFilters>({
     search: '',
@@ -112,14 +115,94 @@ export function TaskProvider({ children }: TaskProviderProps) {
     return true;
   });
 
-  // Save to localStorage on every change
+  // Load tasks and ideas from Supabase on mount
   useEffect(() => {
-    saveTasks(tasks);
-  }, [tasks]);
+    if (initialLoadDone.current) return;
+    initialLoadDone.current = true;
 
+    async function loadData() {
+      try {
+        // One-time migration: move any localStorage data to Supabase
+        await migrateLocalStorageToSupabase();
+
+        const [tasksData, ideasData] = await Promise.all([
+          sbFetchTasks(),
+          sbFetchIdeas(),
+        ]);
+        setTasks(tasksData);
+        setAllIdeas(ideasData);
+      } catch (err) {
+        console.error('Failed to load data from Supabase:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  // Supabase Realtime subscription for tasks
   useEffect(() => {
-    saveIdeas(allIdeas);
-  }, [allIdeas]);
+    const channel = supabase
+      .channel('tasks-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newTask = dbTaskToTask(payload.new as DbTask);
+            setTasks((prev) => {
+              if (prev.some((t) => t.id === newTask.id)) return prev;
+              return [...prev, newTask];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = dbTaskToTask(payload.new as DbTask);
+            setTasks((prev) =>
+              prev.map((t) => (t.id === updated.id ? updated : t))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            setTasks((prev) => prev.filter((t) => t.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Supabase Realtime subscription for ideas
+  useEffect(() => {
+    const channel = supabase
+      .channel('ideas-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ideas' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newIdea = dbIdeaToIdea(payload.new as DbIdea);
+            setAllIdeas((prev) => {
+              if (prev.some((i) => i.id === newIdea.id)) return prev;
+              return [...prev, newIdea];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = dbIdeaToIdea(payload.new as DbIdea);
+            setAllIdeas((prev) =>
+              prev.map((i) => (i.id === updated.id ? updated : i))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            setAllIdeas((prev) => prev.filter((i) => i.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const setFilter = useCallback(<K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -136,85 +219,57 @@ export function TaskProvider({ children }: TaskProviderProps) {
   }, []);
 
   const addTask = useCallback((title: string, description?: string, column: KanbanColumn = 'backlog', priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => {
-    const now = Date.now();
-    const newTask: Task = {
-      id: `task-${now}-${Math.random().toString(36).substr(2, 9)}`,
-      title,
-      description,
-      column,
-      priority,
-      assignee,
-      dueDate,
-      labels,
-      createdAt: now,
-      updatedAt: now,
-    };
-    setTasks((prev) => [...prev, newTask]);
+    sbCreateTask({ title, description, column, priority, assignee, dueDate, labels }).catch(
+      (err) => console.error('Failed to create task:', err)
+    );
   }, []);
 
   const updateTask = useCallback((id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id
-          ? { ...task, ...updates, updatedAt: Date.now() }
-          : task
-      )
+    sbUpdateTask(id, updates).catch(
+      (err) => console.error('Failed to update task:', err)
     );
   }, []);
 
   const deleteTask = useCallback((id: string) => {
-    setTasks((prev) => prev.filter((task) => task.id !== id));
+    sbDeleteTask(id).catch(
+      (err) => console.error('Failed to delete task:', err)
+    );
   }, []);
 
   const moveTask = useCallback((id: string, toColumn: KanbanColumn) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id
-          ? { ...task, column: toColumn, updatedAt: Date.now() }
-          : task
-      )
+    sbUpdateTask(id, { column: toColumn }).catch(
+      (err) => console.error('Failed to move task:', err)
     );
   }, []);
 
   const addIdea = useCallback((content: string) => {
-    const now = Date.now();
-    const newIdea: Idea = {
-      id: `idea-${now}-${Math.random().toString(36).substr(2, 9)}`,
-      content: content.trim(),
-      createdAt: now,
-    };
-    setAllIdeas((prev) => [...prev, newIdea]);
+    sbCreateIdea(content.trim()).catch(
+      (err) => console.error('Failed to create idea:', err)
+    );
   }, []);
 
   const deleteIdea = useCallback((id: string) => {
-    setAllIdeas((prev) => prev.filter((idea) => idea.id !== id));
+    sbDeleteIdea(id).catch(
+      (err) => console.error('Failed to delete idea:', err)
+    );
   }, []);
 
   const archiveIdea = useCallback((id: string, taskId: string) => {
-    setAllIdeas((prev) =>
-      prev.map((idea) =>
-        idea.id === id
-          ? { ...idea, archived: true, convertedToTaskId: taskId, archivedAt: Date.now() }
-          : idea
-      )
-    );
+    sbUpdateIdea(id, {
+      archived: true,
+      convertedToTaskId: taskId,
+      archivedAt: Date.now(),
+    }).catch((err) => console.error('Failed to archive idea:', err));
   }, []);
 
   const promoteIdea = useCallback((id: string) => {
     const idea = allIdeas.find((i) => i.id === id);
     if (idea) {
-      // Add as task to backlog
-      const now = Date.now();
-      const newTask: Task = {
-        id: `task-${now}-${Math.random().toString(36).substr(2, 9)}`,
-        title: idea.content,
-        column: 'backlog',
-        createdAt: now,
-        updatedAt: now,
-      };
-      setTasks((prev) => [...prev, newTask]);
-      // Archive the idea
-      archiveIdea(id, newTask.id);
+      sbCreateTask({ title: idea.content, column: 'backlog' })
+        .then((newTask) => {
+          archiveIdea(id, newTask.id);
+        })
+        .catch((err) => console.error('Failed to promote idea:', err));
     }
   }, [allIdeas, archiveIdea]);
 
@@ -222,6 +277,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     tasks,
     filteredTasks,
     ideas,
+    loading,
     addTask,
     updateTask,
     deleteTask,
