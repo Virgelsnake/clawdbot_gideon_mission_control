@@ -83,7 +83,7 @@ export function KanbanBoard() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === 'list' ? 'outline' : 'ghost'}
+              variant="outline"
               size="icon"
               className="h-8 w-8"
               onClick={() => setViewMode('list')}

@@ -72,20 +72,35 @@ export function ChatPanel() {
 
   if (!isOpen) {
     return (
-      <Button
-        variant="secondary"
-        size="icon"
-        onClick={() => setIsOpen(true)}
-        className="fixed right-4 bottom-4 z-[100] h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow lg:top-20 lg:h-10 lg:w-10 lg:rounded-md"
-        aria-label="Open chat panel"
-      >
-        <div className="relative">
-          <MessageSquare className="h-6 w-6 lg:h-5 lg:w-5" />
-          {messages.length > 0 && (
-            <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary lg:hidden" />
-          )}
-        </div>
-      </Button>
+      <>
+        {/* Mobile: fixed FAB at bottom-right */}
+        <Button
+          variant="secondary"
+          size="icon"
+          onClick={() => setIsOpen(true)}
+          className="fixed right-4 bottom-4 z-[100] h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow lg:hidden"
+          aria-label="Open chat panel"
+        >
+          <div className="relative">
+            <MessageSquare className="h-6 w-6" />
+            {messages.length > 0 && (
+              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary" />
+            )}
+          </div>
+        </Button>
+        {/* Desktop: sits in the same layout slot as the chat panel */}
+        <aside className="hidden lg:flex border-l border-border/50 bg-background flex-col items-center pt-[13px] px-1">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsOpen(true)}
+            className="h-8 w-8"
+            aria-label="Open chat panel"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+        </aside>
+      </>
     );
   }
 
