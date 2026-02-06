@@ -2,103 +2,129 @@
 
 import { useAgent, type DisplayStatus } from '@/contexts/agent-context';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const statusConfig: Record<
   DisplayStatus,
-  { label: string; color: string; bg: string; pulse: boolean; emoji: string; ringColor: string }
+  { label: string; dotColor: string; ringColor: string; animate: boolean; emoji: string }
 > = {
   idle: {
     label: 'Idle',
-    color: 'bg-gray-500',
-    bg: 'bg-gray-500/10',
-    pulse: false,
+    dotColor: 'bg-gray-400',
+    ringColor: 'border-gray-300 dark:border-gray-600',
+    animate: false,
     emoji: '😴',
-    ringColor: 'from-gray-400/0 via-gray-400/50 to-gray-400/0',
   },
   thinking: {
     label: 'Thinking',
-    color: 'bg-yellow-500',
-    bg: 'bg-yellow-500/10',
-    pulse: true,
+    dotColor: 'bg-yellow-500',
+    ringColor: 'border-yellow-400/60',
+    animate: true,
     emoji: '🤔',
-    ringColor: 'from-yellow-400/0 via-yellow-400/60 to-yellow-400/0',
   },
   active: {
     label: 'Active',
-    color: 'bg-green-500',
-    bg: 'bg-green-500/10',
-    pulse: true,
+    dotColor: 'bg-green-500',
+    ringColor: 'border-green-400/60',
+    animate: true,
     emoji: '⚡',
-    ringColor: 'from-green-400/0 via-green-400/60 to-green-400/0',
   },
   resting: {
     label: 'Resting',
-    color: 'bg-red-500',
-    bg: 'bg-red-500/10',
-    pulse: false,
+    dotColor: 'bg-red-500',
+    ringColor: 'border-red-400/50',
+    animate: false,
     emoji: '🛑',
-    ringColor: 'from-red-400/0 via-red-400/50 to-red-400/0',
   },
   disconnected: {
     label: 'Disconnected',
-    color: 'bg-orange-500',
-    bg: 'bg-orange-500/10',
-    pulse: false,
+    dotColor: 'bg-orange-500',
+    ringColor: 'border-orange-400/40',
+    animate: false,
     emoji: '🔌',
-    ringColor: 'from-orange-400/0 via-orange-400/40 to-orange-400/0',
   },
 };
+
+function formatHeartbeatAge(lastHeartbeat: string | null): string {
+  if (!lastHeartbeat) return 'No heartbeat';
+  const age = Date.now() - new Date(lastHeartbeat).getTime();
+  if (age < 60_000) return 'Just now';
+  if (age < 3600_000) return `${Math.floor(age / 60_000)}m ago`;
+  return `${Math.floor(age / 3600_000)}h ago`;
+}
 
 export function StatusIndicator() {
   const { displayStatus, currentModel, connected, lastHeartbeat } = useAgent();
   const config = statusConfig[displayStatus];
 
-  // Format last heartbeat for tooltip
-  const heartbeatLabel = lastHeartbeat
-    ? `Last heartbeat: ${new Date(lastHeartbeat).toLocaleTimeString()}`
-    : 'No heartbeat received';
-
   return (
-    <div className="flex flex-col items-start gap-2">
-      <div
-        className={cn(
-          'flex items-center gap-3 px-4 py-2 rounded-full',
-          config.bg
-        )}
-        title={`${config.label} · ${currentModel} · ${heartbeatLabel}`}
-      >
-        {/* Emoji with pulsing gradient ring */}
-        <div className="relative">
-          {/* Pulsing gradient ring */}
-          <div
-            className={cn(
-              'absolute -inset-1 rounded-full bg-gradient-to-r blur-sm',
-              config.ringColor,
-              config.pulse && 'animate-pulse'
-            )}
-          />
-          {/* Emoji face */}
-          <span className="relative text-2xl">{config.emoji}</span>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <span className={cn(
-            'w-2 h-2 rounded-full',
-            config.color,
-            config.pulse && 'animate-pulse'
-          )} />
-          <span className="text-sm font-medium text-foreground">
-            {config.label}
-          </span>
-        </div>
-      </div>
-      <span className="text-xs text-muted-foreground px-1">
-        {displayStatus === 'disconnected'
-          ? 'Disconnected'
-          : connected
-            ? currentModel
-            : 'Gateway offline'}
-      </span>
-    </div>
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2.5 cursor-default">
+            {/* Animated ring + emoji */}
+            <div className="relative flex items-center justify-center">
+              {/* Spinning ring for active states */}
+              <div
+                className={cn(
+                  'absolute inset-0 rounded-full border-2 border-transparent transition-all duration-500',
+                  config.animate && config.ringColor,
+                  config.animate && 'border-t-transparent animate-[status-ring-spin_2s_linear_infinite]'
+                )}
+                style={{ width: 32, height: 32, margin: -2 }}
+              />
+              <span className="text-xl leading-none transition-transform duration-300">{config.emoji}</span>
+            </div>
+
+            <div className="flex flex-col gap-0">
+              <div className="flex items-center gap-1.5">
+                <span className={cn(
+                  'w-1.5 h-1.5 rounded-full transition-colors duration-300',
+                  config.dotColor,
+                  config.animate && 'animate-pulse'
+                )} />
+                <span className="text-sm font-medium text-foreground leading-tight">
+                  {config.label}
+                </span>
+              </div>
+              <span className="text-[11px] text-muted-foreground leading-tight pl-3">
+                {displayStatus === 'disconnected'
+                  ? 'Disconnected'
+                  : connected
+                    ? currentModel
+                    : 'Gateway offline'}
+              </span>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="start" className="max-w-[220px]">
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Status</span>
+              <span className="font-medium">{config.label}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Model</span>
+              <span className="font-medium truncate max-w-[140px]">{currentModel}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Heartbeat</span>
+              <span className="font-medium">{formatHeartbeatAge(lastHeartbeat ?? null)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Gateway</span>
+              <span className={cn('font-medium', connected ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
+                {connected ? 'Connected' : 'Offline'}
+              </span>
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

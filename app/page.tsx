@@ -8,8 +8,7 @@ import { useTask } from '@/contexts/task-context';
 import { useState, useEffect } from 'react';
 import { ConvertIdeaDialog } from '@/components/ideas/convert-idea-dialog';
 import type { KanbanColumn as ColumnType, Idea } from '@/types';
-import { GripVertical, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { GripVertical } from 'lucide-react';
 
 function KanbanContent() {
   const { tasks, moveTask, ideas } = useTask();
@@ -99,11 +98,14 @@ function KanbanContent() {
       </div>
       
       {/* Drag Overlay - renders dragged item above everything */}
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={{
+        duration: 200,
+        easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+      }}>
         {activeIdea ? (
-          <div className="rounded-md border border-primary bg-card p-2.5 shadow-lg cursor-grabbing ring-2 ring-primary/50 w-64 rotate-2">
+          <div className="rounded-lg border border-primary/40 bg-card p-2.5 shadow-2xl cursor-grabbing ring-1 ring-primary/20 w-64 rotate-[2deg] scale-105 opacity-95 backdrop-blur-sm">
             <div className="flex gap-2">
-              <div className="text-muted-foreground flex-shrink-0 mt-0.5">
+              <div className="text-primary/60 flex-shrink-0 mt-0.5">
                 <GripVertical className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">

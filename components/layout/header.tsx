@@ -25,15 +25,15 @@ import {
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center justify-between px-4 lg:px-6">
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-12 items-center justify-between px-4 lg:px-6">
         {/* Left Section - Logo & Workspace */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <LayoutGrid className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold">Gideon</span>
+            <span className="text-sm font-semibold tracking-tight">Gideon</span>
           </div>
 
           <div className="hidden md:flex items-center">

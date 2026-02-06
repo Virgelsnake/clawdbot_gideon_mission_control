@@ -27,6 +27,7 @@ import type { KanbanColumn, TaskPriority } from '@/types';
 
 interface AddTaskDialogProps {
   defaultColumn?: KanbanColumn;
+  variant?: 'header' | 'column';
 }
 
 const COLUMNS: { id: KanbanColumn; title: string }[] = [
@@ -55,7 +56,7 @@ const LABEL_COLORS: Record<string, string> = {
   research: 'bg-amber-100 text-amber-700 border-amber-200',
 };
 
-export function AddTaskDialog({ defaultColumn = 'backlog' }: AddTaskDialogProps) {
+export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }: AddTaskDialogProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -99,10 +100,16 @@ export function AddTaskDialog({ defaultColumn = 'backlog' }: AddTaskDialogProps)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Task
-        </Button>
+        {variant === 'column' ? (
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        ) : (
+          <Button variant="default" size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Task
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>

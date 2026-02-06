@@ -94,31 +94,33 @@ export function MessageBubble({ message, showDateHeader }: MessageBubbleProps) {
       )}
       <div
         className={cn(
-          'flex gap-3 p-3 rounded-lg',
-          isUser ? 'flex-row-reverse bg-muted/50' : 'flex-row bg-background'
+          'flex gap-2.5 px-3 py-2 rounded-lg transition-colors duration-150',
+          isUser ? 'flex-row-reverse' : 'flex-row'
         )}
       >
         <div
           className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full mt-0.5',
             isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
           )}
         >
-          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+          {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
         </div>
-        <div className={cn('flex flex-col gap-1 min-w-0 flex-1', isUser ? 'items-end' : 'items-start')}>
-          <div className={cn('flex items-center gap-2', isUser ? 'flex-row-reverse' : 'flex-row')}>
-            <span className="text-xs font-medium text-muted-foreground">
+        <div className={cn('flex flex-col gap-0.5 min-w-0 flex-1', isUser ? 'items-end' : 'items-start')}>
+          <div className={cn('flex items-center gap-1.5', isUser ? 'flex-row-reverse' : 'flex-row')}>
+            <span className="text-xs font-medium text-foreground/80">
               {isUser ? 'You' : 'Gideon'}
             </span>
-            <span className="text-[10px] text-muted-foreground/60">
+            <span className="text-[10px] text-muted-foreground/50">
               {formatTime(message.timestamp)}
             </span>
           </div>
           <div
             className={cn(
-              'text-sm leading-relaxed max-w-full overflow-hidden',
-              isUser ? 'text-right' : 'text-left'
+              'text-[13px] leading-relaxed max-w-full overflow-hidden',
+              isUser
+                ? 'text-right bg-primary/[0.06] dark:bg-primary/10 rounded-lg rounded-tr-sm px-3 py-2'
+                : 'text-left'
             )}
           >
             {isUser ? (

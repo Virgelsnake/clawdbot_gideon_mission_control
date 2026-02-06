@@ -32,22 +32,23 @@ export function ChatInput({ onSendMessage }: ChatInputProps) {
   };
 
   return (
-    <div className="flex items-end gap-2 border-t border-border p-3">
+    <div className="flex items-end gap-2 border-t border-border/50 px-3 py-2.5">
       <Input
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Type a message..."
         disabled={isStreaming}
-        className="flex-1 resize-none"
+        className="flex-1 resize-none h-9 text-sm bg-muted/30 border-border/50 focus-visible:ring-1"
       />
       <Button
         onClick={handleSend}
         disabled={!input.trim() || isStreaming}
         size="icon"
+        className="h-9 w-9 shrink-0"
         aria-label="Send message"
       >
-        <Send className="h-4 w-4" />
+        <Send className="h-3.5 w-3.5" />
       </Button>
     </div>
   );

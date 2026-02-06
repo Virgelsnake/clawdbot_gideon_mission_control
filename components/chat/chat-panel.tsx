@@ -100,17 +100,17 @@ export function ChatPanel() {
         />
       )}
       <aside className={cn(
-        "border-l border-border bg-background flex flex-col z-[100] transition-all duration-300 ease-out",
+        "border-l border-border/50 bg-background flex flex-col z-[100] transition-all duration-300 ease-out",
         isMobile 
           ? "fixed inset-x-4 top-16 bottom-4 rounded-xl shadow-2xl max-w-md mx-auto h-auto" 
           : "w-80 relative"
       )}>
-        <div className="flex items-center justify-between border-b border-border p-3">
+        <div className="flex items-center justify-between border-b border-border/50 px-3 py-2">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold">Chat</h2>
+            <h2 className="text-sm font-medium">Chat</h2>
             {messages.length > 0 && (
-              <span className="text-xs text-muted-foreground">
-                ({messages.length})
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {messages.length}
               </span>
             )}
           </div>
@@ -141,7 +141,7 @@ export function ChatPanel() {
           </div>
         </div>
         <ChatPanelHeader />
-        <div className={cn('flex-1 overflow-hidden p-3')}>
+        <div className="flex-1 overflow-hidden px-1 py-2">
           <MessageList />
         </div>
         <ChatInput onSendMessage={handleSendMessage} />

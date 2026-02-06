@@ -5,6 +5,7 @@ import { useTask } from '@/contexts/task-context';
 import { Lightbulb, GripVertical, Trash2 } from 'lucide-react';
 import { AddIdeaDialog } from './add-idea-dialog';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
@@ -78,7 +79,7 @@ function IdeaCard({ idea }: { idea: { id: string; content: string; createdAt: nu
 }
 
 export function IdeasPanel() {
-  const { ideas } = useTask();
+  const { ideas, loading } = useTask();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -87,12 +88,12 @@ export function IdeasPanel() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col border-r border-border bg-muted/30 w-80">
+    <div className="flex h-full flex-col border-r border-border/50 bg-muted/20 w-72">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border p-4">
+      <div className="flex items-center justify-between border-b border-border/50 px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-yellow-500" />
-          <h2 className="font-semibold">Ideas</h2>
+          <Lightbulb className="h-4 w-4 text-yellow-500" />
+          <h2 className="text-sm font-medium">Ideas</h2>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
@@ -104,15 +105,26 @@ export function IdeasPanel() {
 
       {/* Ideas List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {!mounted ? (
-          <div className="flex flex-col items-center justify-center h-full text-center py-8">
-            <Lightbulb className="h-10 w-10 text-yellow-500/50 mb-3" />
-            <p className="text-sm font-medium text-muted-foreground">Loading ideas…</p>
+        {!mounted || loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-md border border-border bg-card p-2.5">
+                <div className="flex gap-2">
+                  <Skeleton className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-2/3" />
+                    <Skeleton className="h-3 w-12 mt-1" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : ideas.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <Lightbulb className="h-10 w-10 text-yellow-500/50 mb-3" />
-            <p className="text-sm font-medium text-muted-foreground">No ideas</p>
+            <p className="text-sm font-medium text-muted-foreground">No ideas yet</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Capture quick thoughts here</p>
           </div>
         ) : (
           ideas.map((idea) => <IdeaCard key={idea.id} idea={idea} />)

@@ -37,38 +37,38 @@ interface TaskCardProps {
 
 const PRIORITY_CONFIG: Record<TaskPriority, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
   low: {
-    color: 'text-slate-600',
-    bg: 'bg-slate-100',
+    color: 'text-slate-600 dark:text-slate-400',
+    bg: 'bg-slate-100 dark:bg-slate-800/50',
     icon: <Flag className="h-3 w-3" />,
     label: 'Low',
   },
   medium: {
-    color: 'text-blue-600',
-    bg: 'bg-blue-100',
+    color: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-50 dark:bg-blue-900/30',
     icon: <Flag className="h-3 w-3" />,
     label: 'Medium',
   },
   high: {
-    color: 'text-orange-600',
-    bg: 'bg-orange-100',
+    color: 'text-orange-600 dark:text-orange-400',
+    bg: 'bg-orange-50 dark:bg-orange-900/30',
     icon: <Flag className="h-3 w-3" />,
     label: 'High',
   },
   urgent: {
-    color: 'text-red-600',
-    bg: 'bg-red-100',
+    color: 'text-red-600 dark:text-red-400',
+    bg: 'bg-red-50 dark:bg-red-900/30',
     icon: <AlertCircle className="h-3 w-3" />,
     label: 'Urgent',
   },
 };
 
 const LABEL_COLORS: Record<string, string> = {
-  bug: 'bg-red-100 text-red-700',
-  feature: 'bg-blue-100 text-blue-700',
-  enhancement: 'bg-purple-100 text-purple-700',
-  docs: 'bg-green-100 text-green-700',
-  design: 'bg-pink-100 text-pink-700',
-  research: 'bg-amber-100 text-amber-700',
+  bug: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  feature: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  enhancement: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  docs: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  design: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+  research: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
 function getInitials(name?: string): string {
@@ -133,8 +133,8 @@ export function TaskCard({ task }: TaskCardProps) {
         style={style}
         {...listeners}
         {...attributes}
-        className={`rounded-lg border bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing group transition-all duration-200 ease-out hover:shadow-md hover:border-primary/50 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-          isDragging ? 'opacity-60 rotate-2 scale-105 shadow-xl ring-2 ring-primary/20' : ''
+        className={`rounded-lg border border-border/60 bg-card p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] cursor-grab active:cursor-grabbing group transition-all duration-200 ease-out hover:shadow-md hover:border-border hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+          isDragging ? 'opacity-50 rotate-[3deg] scale-105 shadow-xl ring-2 ring-primary/30 border-primary/40' : ''
         }`}
         aria-label={`Task: ${task.title}`}
         tabIndex={0}
@@ -146,13 +146,13 @@ export function TaskCard({ task }: TaskCardProps) {
               <Badge
                 key={label}
                 variant="secondary"
-                className={`text-[10px] px-1.5 py-0.5 font-medium ${LABEL_COLORS[label] || 'bg-muted text-muted-foreground'}`}
+                className={`text-[10px] px-1.5 py-0 h-[18px] font-medium border-0 ${LABEL_COLORS[label] || 'bg-muted text-muted-foreground'}`}
               >
                 {label}
               </Badge>
             ))}
             {task.labels.length > 3 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-[18px] text-muted-foreground">
                 +{task.labels.length - 3}
               </Badge>
             )}
@@ -193,17 +193,17 @@ export function TaskCard({ task }: TaskCardProps) {
         )}
 
         {/* Footer Row */}
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="mt-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
             {/* Priority Badge */}
-            <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${priorityConfig.bg} ${priorityConfig.color}`}>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${priorityConfig.bg} ${priorityConfig.color}`}>
               {priorityConfig.icon}
               {priorityConfig.label}
             </span>
 
             {/* Due Date */}
             {task.dueDate && (
-              <span className={`inline-flex items-center gap-1 text-[10px] ${overdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+              <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${overdue ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 font-medium' : 'text-muted-foreground'}`}>
                 <Calendar className="h-3 w-3" />
                 {formatDate(task.dueDate)}
               </span>
@@ -212,8 +212,8 @@ export function TaskCard({ task }: TaskCardProps) {
 
           {/* Assignee */}
           {task.assignee && (
-            <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+            <Avatar className="h-5 w-5">
+              <AvatarFallback className="text-[9px] bg-primary/10 text-primary font-medium">
                 {getInitials(task.assignee)}
               </AvatarFallback>
             </Avatar>

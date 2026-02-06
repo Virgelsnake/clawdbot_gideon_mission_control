@@ -6,6 +6,7 @@ import { FilterDropdown } from './filter-dropdown';
 import { ActiveFilters } from './active-filters';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   SortAsc,
   LayoutGrid,
@@ -32,7 +33,7 @@ const COLUMNS: {
 ];
 
 export function KanbanBoard() {
-  const { tasks, filteredTasks } = useTask();
+  const { tasks, filteredTasks, loading } = useTask();
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('board');
 
@@ -49,10 +50,10 @@ export function KanbanBoard() {
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Board Header */}
-      <div className="flex flex-col gap-4 border-b border-border px-6 py-4">
+      <div className="flex flex-col gap-3 border-b border-border/50 px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-semibold">{viewMode === 'board' ? 'Board View' : 'List View'}</h2>
+            <h2 className="text-base font-semibold tracking-tight">{viewMode === 'board' ? 'Board' : 'List'}</h2>
             <Badge variant="secondary" className="font-normal">
               {mounted ? (
                 <>
@@ -103,9 +104,9 @@ export function KanbanBoard() {
                 <span>Project Progress</span>
                 <span>{mounted ? progress : 0}%</span>
               </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${mounted ? progress : 0}%` }}
                 />
               </div>
@@ -123,7 +124,33 @@ export function KanbanBoard() {
       </div>
 
       {/* View Content */}
-      {viewMode === 'board' ? (
+      {loading ? (
+        <div className="flex flex-1 gap-4 overflow-x-auto px-6 py-4">
+          {COLUMNS.map((column) => (
+            <div key={column.id} className="flex w-72 shrink-0 flex-col rounded-xl border border-border/40 bg-card/50">
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="w-2 h-2 rounded-full" />
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-3 w-4" />
+                </div>
+              </div>
+              <div className="flex-1 px-2 pb-2 space-y-2">
+                {Array.from({ length: column.id === 'backlog' ? 3 : column.id === 'todo' ? 2 : 1 }).map((_, i) => (
+                  <div key={i} className="rounded-lg border border-border/60 bg-card p-3 space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-3/4" />
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <Skeleton className="h-4 w-14 rounded" />
+                      <Skeleton className="h-4 w-16 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : viewMode === 'board' ? (
         <div className="flex flex-1 gap-4 overflow-x-auto px-6 py-4">
           {COLUMNS.map((column) => (
             <KanbanColumn

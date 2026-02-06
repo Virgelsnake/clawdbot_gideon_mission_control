@@ -101,11 +101,14 @@ export function TaskList() {
 
   if (filteredTasks.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        <div className="text-muted-foreground text-center">
-          <p className="text-lg font-medium mb-2">No tasks found</p>
-          <p className="text-sm">Try adjusting your filters or create a new task</p>
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+          <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
         </div>
+        <p className="text-sm font-medium text-foreground mb-1">No tasks found</p>
+        <p className="text-xs text-muted-foreground max-w-[240px] text-center">
+          Try adjusting your filters or create a new task to get started
+        </p>
       </div>
     );
   }

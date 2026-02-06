@@ -3,8 +3,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import type { Task, KanbanColumn as ColumnType } from '@/types';
 import { TaskCard } from './task-card';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { AddTaskDialog } from './add-task-dialog';
 import { useState, useEffect } from 'react';
 
 interface KanbanColumnProps {
@@ -15,7 +14,15 @@ interface KanbanColumnProps {
   tasks: Task[];
 }
 
-export function KanbanColumn({ id, title, color, bgColor, tasks }: KanbanColumnProps) {
+const COLUMN_DOT_COLORS: Record<ColumnType, string> = {
+  backlog: 'bg-slate-400',
+  todo: 'bg-blue-500',
+  'in-progress': 'bg-amber-500',
+  review: 'bg-purple-500',
+  done: 'bg-emerald-500',
+};
+
+export function KanbanColumn({ id, title, tasks }: KanbanColumnProps) {
   const [mounted, setMounted] = useState(false);
   const { isOver, setNodeRef } = useDroppable({
     id,
@@ -29,37 +36,36 @@ export function KanbanColumn({ id, title, color, bgColor, tasks }: KanbanColumnP
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-72 shrink-0 flex-col rounded-xl border bg-card transition-all duration-200 ease-out ${
-        isOver ? 'border-primary shadow-lg ring-1 ring-primary/20' : 'border-border/50'
+      className={`flex w-72 shrink-0 flex-col rounded-xl border transition-all duration-200 ease-out ${
+        isOver
+          ? 'border-primary/50 bg-primary/[0.02] shadow-lg ring-1 ring-primary/10'
+          : 'border-border/40 bg-card/50'
       }`}
     >
       {/* Column Header */}
-      <div className={`flex items-center justify-between p-3 rounded-t-xl ${bgColor}`}>
+      <div className="flex items-center justify-between px-3 py-2.5 rounded-t-xl">
         <div className="flex items-center gap-2">
-          <h3 className={`font-semibold text-sm ${color}`}>{title}</h3>
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full bg-white/80 dark:bg-black/20 ${color}`}>
+          <div className={`w-2 h-2 rounded-full ${COLUMN_DOT_COLORS[id]}`} />
+          <h3 className="font-medium text-sm text-foreground">{title}</h3>
+          <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
             {mounted ? tasks.length : 0}
           </span>
         </div>
+        <AddTaskDialog defaultColumn={id} variant="column" />
       </div>
 
       {/* Tasks Container */}
-      <div className="flex-1 p-3 space-y-3 min-h-[100px] bg-muted/20">
+      <div className={`flex-1 px-2 pb-2 space-y-2 min-h-[80px] transition-colors duration-200 ${
+        isOver ? 'bg-primary/[0.02]' : ''
+      }`}>
         {tasks.map((task) => (
           <TaskCard key={task.id} task={task} />
         ))}
-      </div>
-
-      {/* Add Task Button */}
-      <div className="p-3 border-t border-border/50">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-        >
-          <Plus className="h-4 w-4" />
-          Add Task
-        </Button>
+        {isOver && tasks.length === 0 && (
+          <div className="h-20 rounded-lg border-2 border-dashed border-primary/30 bg-primary/[0.03] flex items-center justify-center">
+            <span className="text-xs text-primary/50">Drop here</span>
+          </div>
+        )}
       </div>
     </div>
   );

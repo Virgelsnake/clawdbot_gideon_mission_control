@@ -4,6 +4,7 @@ import { useChat } from '@/contexts/chat-context';
 import { MessageBubble } from './message-bubble';
 import { useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 
 function getDateHeader(timestamp: number, prevTimestamp: number | null): string | null {
@@ -51,17 +52,30 @@ export function MessageList() {
 
   if (isLoading && messages.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-        <span>Loading messages...</span>
+      <div className="flex h-full flex-col gap-3 p-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className={`flex gap-2.5 px-3 py-2 ${i % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
+            <Skeleton className="h-7 w-7 rounded-full shrink-0" />
+            <div className={`flex flex-col gap-1.5 flex-1 ${i % 2 === 0 ? 'items-start' : 'items-end'}`}>
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className={`h-10 rounded-lg ${i % 2 === 0 ? 'w-3/4' : 'w-1/2'}`} />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
   if (messages.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        <p>Start a conversation with Gideon...</p>
+      <div className="flex h-full flex-col items-center justify-center text-center px-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted mb-3">
+          <span className="text-lg">💬</span>
+        </div>
+        <p className="text-sm font-medium text-foreground">No messages yet</p>
+        <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">
+          Send a message to start a conversation with Gideon
+        </p>
       </div>
     );
   }
@@ -100,18 +114,18 @@ export function MessageList() {
       })}
       {isStreaming && (
         <div 
-          className="flex items-center gap-2 p-3 text-sm text-muted-foreground"
+          className="flex items-center gap-2.5 px-3 py-2"
           aria-live="polite"
           aria-label="Gideon is typing"
         >
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted">
-            <div className="flex gap-0.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" />
-              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.15s]" />
-              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.3s]" />
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <div className="flex gap-[3px]">
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-[typing-dot_1.4s_ease-in-out_infinite]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-[typing-dot_1.4s_ease-in-out_0.2s_infinite]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-[typing-dot_1.4s_ease-in-out_0.4s_infinite]" />
             </div>
           </div>
-          <span className="text-xs">Gideon is thinking...</span>
+          <span className="text-[11px] text-muted-foreground/60 italic">Gideon is thinking...</span>
         </div>
       )}
     </div>
