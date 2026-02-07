@@ -12,10 +12,13 @@ import {
   LayoutGrid,
   List,
 } from 'lucide-react';
-import type { KanbanColumn as ColumnType } from '@/types';
+import { cn } from '@/lib/utils';
+import type { KanbanColumn as ColumnType, Task } from '@/types';
 import { KanbanColumn } from './kanban-column';
+import { TaskCard } from './task-card';
 import { TaskList } from './task-list';
-import { useState, useEffect } from 'react';
+import { TaskDetailDialog } from './task-detail-dialog';
+import { useState, useEffect, useCallback } from 'react';
 
 type ViewMode = 'board' | 'list';
 
@@ -32,10 +35,22 @@ const COLUMNS: {
   { id: 'done', title: 'Done', color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
 ];
 
-export function KanbanBoard() {
+interface KanbanBoardProps {
+  mobile?: boolean;
+}
+
+export function KanbanBoard({ mobile }: KanbanBoardProps) {
   const { tasks, filteredTasks, loading } = useTask();
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('board');
+  const [mobileColumn, setMobileColumn] = useState<ColumnType>('todo');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const handleTaskClick = useCallback((task: Task) => {
+    setSelectedTask(task);
+    setDetailOpen(true);
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -46,6 +61,87 @@ export function KanbanBoard() {
   const filteredCount = filteredTasks.length;
   const completedTasks = tasks.filter((t) => t.column === 'done').length;
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  const COLUMN_DOT_COLORS: Record<ColumnType, string> = {
+    backlog: 'bg-slate-400',
+    todo: 'bg-blue-500',
+    'in-progress': 'bg-amber-500',
+    review: 'bg-purple-500',
+    done: 'bg-emerald-500',
+  };
+
+  // Mobile view: column selector tabs + single-column card list
+  if (mobile) {
+    const mobileColumnTasks = filteredTasks.filter((t) => t.column === mobileColumn);
+    const activeCol = COLUMNS.find((c) => c.id === mobileColumn);
+
+    return (
+      <div className="flex h-full flex-col bg-background">
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between border-b border-border/50 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">Board</h2>
+            <Badge variant="secondary" className="text-xs font-normal">
+              {mounted ? filteredCount : 0}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <FilterDropdown />
+            <AddTaskDialog />
+          </div>
+        </div>
+
+        {/* Column Selector Tabs */}
+        <div className="flex border-b border-border/50 overflow-x-auto scrollbar-none">
+          {COLUMNS.map((col) => {
+            const count = filteredTasks.filter((t) => t.column === col.id).length;
+            return (
+              <button
+                key={col.id}
+                onClick={() => setMobileColumn(col.id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 transition-colors',
+                  mobileColumn === col.id
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground'
+                )}
+              >
+                <div className={cn('w-1.5 h-1.5 rounded-full', COLUMN_DOT_COLORS[col.id])} />
+                {col.title}
+                <span className="text-[10px] text-muted-foreground">{mounted ? count : 0}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Task Cards */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-border/60 bg-card p-3 space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <Skeleton className="h-4 w-14 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : mobileColumnTasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-center">
+              <p className="text-sm text-muted-foreground">No tasks in {activeCol?.title}</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Add a task to get started</p>
+            </div>
+          ) : (
+            mobileColumnTasks.map((task) => (
+              <TaskCard key={task.id} task={task} onTaskClick={handleTaskClick} />
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -160,12 +256,19 @@ export function KanbanBoard() {
               color={column.color}
               bgColor={column.bgColor}
               tasks={filteredTasks.filter((task) => task.column === column.id)}
+              onTaskClick={handleTaskClick}
             />
           ))}
         </div>
       ) : (
-        <TaskList />
+        <TaskList onTaskClick={handleTaskClick} />
       )}
+
+      <TaskDetailDialog
+        task={selectedTask}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+      />
     </div>
   );
 }

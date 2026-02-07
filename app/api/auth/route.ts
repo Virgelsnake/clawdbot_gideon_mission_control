@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { jsonError } from '@/lib/api/errors';
+
 export async function POST(request: NextRequest) {
   const sitePassword = process.env.SITE_PASSWORD;
 
   if (!sitePassword) {
-    return NextResponse.json({ error: 'Access control not configured' }, { status: 500 });
+    return jsonError(500, { code: 'missing_config', message: 'Access control not configured' });
   }
 
   let body: { password?: string };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    return jsonError(400, { code: 'bad_request', message: 'Invalid request body' });
   }
 
   if (body.password !== sitePassword) {
-    return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
+    return jsonError(401, { code: 'bad_request', message: 'Incorrect password' });
   }
 
   const response = NextResponse.json({ ok: true });

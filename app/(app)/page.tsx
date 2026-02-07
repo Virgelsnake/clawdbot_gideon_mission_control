@@ -5,6 +5,7 @@ import { DndContext, DragEndEvent, useSensor, useSensors, MouseSensor, DragStart
 import { KanbanBoard } from '@/components/kanban/kanban-board';
 import { IdeasPanel } from '@/components/ideas/ideas-panel';
 import { useTask } from '@/contexts/task-context';
+import { useMobileView } from '@/contexts/mobile-view-context';
 import { useState, useEffect } from 'react';
 import { ConvertIdeaDialog } from '@/components/ideas/convert-idea-dialog';
 import type { KanbanColumn as ColumnType, Idea } from '@/types';
@@ -12,6 +13,7 @@ import { GripVertical } from 'lucide-react';
 
 function KanbanContent() {
   const { tasks, moveTask, ideas } = useTask();
+  const { isMobile, activeTab } = useMobileView();
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [ideaToConvert, setIdeaToConvert] = useState<{ idea: Idea; column: ColumnType } | null>(null);
   const [activeIdea, setActiveIdea] = useState<Idea | null>(null);
@@ -32,7 +34,6 @@ function KanbanContent() {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    console.log('DragStart:', active.id);
     
     if (active.data.current?.type === 'idea') {
       setActiveIdea(active.data.current.idea as Idea);
@@ -42,13 +43,9 @@ function KanbanContent() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    console.log('DragEnd - active:', active.id);
-    console.log('DragEnd - over:', over?.id);
-    
     setActiveIdea(null);
 
     if (!over) {
-      console.log('DragEnd - no drop target');
       return;
     }
 
@@ -57,7 +54,6 @@ function KanbanContent() {
     // Check if dragging an idea by checking the data type
     if (active.data.current?.type === 'idea') {
       const idea = active.data.current.idea as Idea;
-      console.log('DragEnd - converting idea:', idea.id, 'to column:', toColumn);
       setIdeaToConvert({ idea, column: toColumn });
       setConvertDialogOpen(true);
       return;
@@ -70,6 +66,18 @@ function KanbanContent() {
       moveTask(activeId, toColumn);
     }
   };
+
+  // On mobile, only render the active tab's content
+  if (isMobile) {
+    if (activeTab === 'chat' || activeTab === 'settings') {
+      // Chat and Settings are rendered as fixed overlays from the layout
+      return null;
+    }
+    if (activeTab === 'ideas') {
+      return <IdeasPanel mobile />;
+    }
+    return <KanbanBoard mobile />;
+  }
 
   // Prevent hydration mismatch by not rendering DndContext until client-side
   if (!isClient) {

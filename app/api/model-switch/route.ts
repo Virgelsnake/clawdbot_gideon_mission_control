@@ -130,6 +130,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Log model switch to activity_log
+    supabase
+      .from('activity_log')
+      .insert({
+        actor: 'steve',
+        action: 'model_switched',
+        entity_type: 'agent_state',
+        changes: { model: { new: model } },
+        metadata: { mode: isGatewayTunnel() ? 'tunnel' : 'local' },
+      })
+      .then(({ error: logErr }) => {
+        if (logErr) console.error('[model-switch] Failed to log activity:', logErr.message);
+      });
+
     return Response.json(
       { ok: true, model, mode: isGatewayTunnel() ? 'tunnel' : 'local' },
       { status: 200, headers: { 'Cache-Control': 'no-store' } }

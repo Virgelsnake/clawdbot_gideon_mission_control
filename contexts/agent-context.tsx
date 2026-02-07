@@ -1,14 +1,22 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
-import type { AgentStatus, AgentState } from '@/types';
+import type { AgentStatus, AgentState, AutonomyConfig } from '@/types';
 import { fetchModels, fetchStatus, requestModelSwitch, fetchModelHealth, type ModelHealthEntry } from '@/lib/api/agent';
-import { fetchAgentState, subscribeAgentState } from '@/lib/supabase/agent-state';
+import { fetchAgentState, subscribeAgentState, updateAutonomyConfig as updateAutonomyConfigDb } from '@/lib/supabase/agent-state';
 
 // UI-only display status — extends AgentStatus with 'disconnected'
 export type DisplayStatus = AgentStatus | 'disconnected';
 
 const HEARTBEAT_TIMEOUT_MS = 60_000; // 60 seconds
+
+const DEFAULT_AUTONOMY: AutonomyConfig = {
+  autoPickupEnabled: true,
+  maxConcurrentTasks: 1,
+  nightlyStartHour: 22,
+  repickWindowMinutes: 120,
+  dueDateUrgencyHours: 48,
+};
 
 interface AgentContextValue {
   status: AgentStatus;
@@ -19,8 +27,10 @@ interface AgentContextValue {
   configuredModels: string[];
   modelHealth: Record<string, ModelHealthEntry>;
   lastHeartbeat: string | undefined;
+  autonomy: AutonomyConfig;
   setStatus: (status: AgentStatus) => void;
   setCurrentModel: (model: string) => Promise<void>;
+  updateAutonomyConfig: (config: Partial<AutonomyConfig>) => Promise<void>;
   refresh: () => Promise<void>;
   refreshHealth: () => Promise<void>;
 }
@@ -47,6 +57,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [modelHealth, setModelHealth] = useState<Record<string, ModelHealthEntry>>({});
   const [configuredModels, setConfiguredModels] = useState<string[]>([]);
+  const [autonomy, setAutonomy] = useState<AutonomyConfig>(DEFAULT_AUTONOMY);
   const gatewayModelsLoadedRef = useRef(false);
 
   // Derive display status from heartbeat freshness + gateway connectivity
@@ -61,7 +72,6 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
   // Apply agent state from Supabase (used by both initial fetch and Realtime)
   const applyAgentState = useCallback((state: AgentState) => {
-    console.log(`[DIAG][AgentContext] applyAgentState: status=${state.status}, model=${state.currentModel}, modelList=[${state.modelList.join(',')}], heartbeat=${state.lastHeartbeat}`);
     setStatusState(state.status);
     setCurrentModelState(state.currentModel);
     // Never let Supabase overwrite the richer gateway model list
@@ -69,6 +79,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
       setModelList(state.modelList);
     }
     setLastHeartbeat(state.lastHeartbeat);
+    setAutonomy(state.autonomy);
     updateDisplayStatus(state.status, state.lastHeartbeat, connected);
   }, [updateDisplayStatus, connected]);
 
@@ -86,7 +97,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
       }
       setModelHealth(map);
     } catch (err) {
-      console.error('[DIAG][AgentContext] refreshHealth FAILED:', err);
+      console.error('[AgentContext] refreshHealth failed:', err);
     }
   }, []);
 
@@ -95,7 +106,6 @@ export function AgentProvider({ children }: AgentProviderProps) {
     try {
       const [modelsRes, statusRes] = await Promise.all([fetchModels(), fetchStatus()]);
       const isConnected = Boolean(statusRes?.connected);
-      console.log(`[DIAG][AgentContext] refresh: connected=${isConnected}, modelsSource=${modelsRes?.source}, models=[${(modelsRes?.models || []).map(m => m.id).join(',')}], statusOk=${statusRes?.ok}`);
       setConnected(isConnected);
 
       const ids = (modelsRes?.models || []).map((m) => m.id).filter(Boolean);
@@ -119,7 +129,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
       // Re-evaluate display status with fresh connectivity info
       updateDisplayStatus(status, lastHeartbeat, isConnected);
     } catch (err) {
-      console.error(`[DIAG][AgentContext] refresh FAILED:`, err);
+      console.error('[AgentContext] refresh failed:', err);
       setConnected(false);
       updateDisplayStatus(status, lastHeartbeat, false);
     }
@@ -178,15 +188,26 @@ export function AgentProvider({ children }: AgentProviderProps) {
     return () => clearInterval(t);
   }, [refreshHealth]);
 
+  const updateAutonomyConfig = useCallback(
+    async (config: Partial<AutonomyConfig>) => {
+      // Optimistic update
+      setAutonomy(prev => ({ ...prev, ...config }));
+      const result = await updateAutonomyConfigDb(config);
+      if (result) {
+        setAutonomy(result.autonomy);
+      }
+    },
+    []
+  );
+
   const setCurrentModel = useCallback(
     async (model: string) => {
-      console.log(`[DIAG][AgentContext] setCurrentModel called: model=${model}`);
       setCurrentModelState(model);
       try {
         const result = await requestModelSwitch(model);
-        console.log(`[DIAG][AgentContext] requestModelSwitch result:`, result);
+        void result;
       } catch (err) {
-        console.error(`[DIAG][AgentContext] requestModelSwitch FAILED:`, err);
+        console.error('[AgentContext] requestModelSwitch failed:', err);
         throw err;
       }
       // On success, Supabase agent_state is updated server-side.
@@ -204,8 +225,10 @@ export function AgentProvider({ children }: AgentProviderProps) {
     configuredModels,
     modelHealth,
     lastHeartbeat,
+    autonomy,
     setStatus,
     setCurrentModel,
+    updateAutonomyConfig,
     refresh,
     refreshHealth,
   };

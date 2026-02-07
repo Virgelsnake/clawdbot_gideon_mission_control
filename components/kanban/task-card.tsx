@@ -33,6 +33,7 @@ import {
 
 interface TaskCardProps {
   task: Task;
+  onTaskClick?: (task: Task) => void;
 }
 
 const PRIORITY_CONFIG: Record<TaskPriority, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
@@ -96,7 +97,7 @@ function isOverdue(timestamp?: number): boolean {
   return new Date(timestamp) < new Date() && new Date(timestamp).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0);
 }
 
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task, onTaskClick }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
   });
@@ -133,6 +134,7 @@ export function TaskCard({ task }: TaskCardProps) {
         style={style}
         {...listeners}
         {...attributes}
+        onClick={() => onTaskClick?.(task)}
         className={`rounded-lg border border-border/60 bg-card p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] cursor-grab active:cursor-grabbing group transition-all duration-200 ease-out hover:shadow-md hover:border-border hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
           isDragging ? 'opacity-50 rotate-[3deg] scale-105 shadow-xl ring-2 ring-primary/30 border-primary/40' : ''
         }`}
@@ -167,7 +169,7 @@ export function TaskCard({ task }: TaskCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-7 w-7 sm:h-6 sm:w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
               >
                 <MoreHorizontal className="h-3 w-3" />
               </Button>

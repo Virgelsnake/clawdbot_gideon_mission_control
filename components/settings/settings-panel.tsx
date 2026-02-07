@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useSettings } from '@/contexts/settings-context';
 import { useChat } from '@/contexts/chat-context';
-import type { KanbanColumn, TaskPriority } from '@/types';
+import { useAgent } from '@/contexts/agent-context';
+import { logActivity } from '@/lib/supabase/activity-log';
+import type { KanbanColumn, TaskPriority, AutonomyConfig } from '@/types';
 import {
   Sheet,
   SheetContent,
@@ -23,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tag, Users, LayoutGrid, MessageSquare, Plus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Tag, Users, LayoutGrid, MessageSquare, Plus, Trash2, Pencil, Check, X, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -442,7 +445,195 @@ function ChatSection() {
   );
 }
 
-// --- Main Settings Panel ---
+// --- Autonomy Section ---
+function AutonomySection() {
+  const { autonomy, updateAutonomyConfig } = useAgent();
+
+  const handleChange = async <K extends keyof AutonomyConfig>(key: K, value: AutonomyConfig[K]) => {
+    const old = autonomy[key];
+    if (old === value) return;
+    await updateAutonomyConfig({ [key]: value });
+    void logActivity({
+      actor: 'steve',
+      action: 'config_updated',
+      entityType: 'agent_state',
+      changes: { [key]: { old, new: value } },
+      metadata: { field: key },
+    });
+    toast.success('Autonomy setting updated');
+  };
+
+  const formatHour = (h: number) => {
+    const suffix = h >= 12 ? 'PM' : 'AM';
+    const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${display} ${suffix}`;
+  };
+
+  return (
+    <div className="space-y-5">
+      <p className="text-xs text-muted-foreground">
+        Control how Gideon autonomously picks up and works on tasks.
+      </p>
+
+      {/* Auto-pickup toggle */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <Label className="text-xs font-medium">Auto-pickup</Label>
+          <p className="text-[11px] text-muted-foreground">Allow Gideon to automatically pick up unassigned tasks.</p>
+        </div>
+        <Switch
+          checked={autonomy.autoPickupEnabled}
+          onCheckedChange={(checked) => handleChange('autoPickupEnabled', checked)}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Max concurrent tasks */}
+      <div className="grid gap-2">
+        <Label className="text-xs font-medium">Max Concurrent Tasks</Label>
+        <Select
+          value={String(autonomy.maxConcurrentTasks)}
+          onValueChange={(v) => handleChange('maxConcurrentTasks', Number(v))}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[1, 2, 3, 4, 5].map(n => (
+              <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">Maximum tasks Gideon can work on simultaneously.</p>
+      </div>
+
+      {/* Nightly start hour */}
+      <div className="grid gap-2">
+        <Label className="text-xs font-medium">Nightly Cycle Start</Label>
+        <Select
+          value={String(autonomy.nightlyStartHour)}
+          onValueChange={(v) => handleChange('nightlyStartHour', Number(v))}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue>{formatHour(autonomy.nightlyStartHour)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: 24 }, (_, i) => (
+              <SelectItem key={i} value={String(i)}>{formatHour(i)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">Hour when Gideon&apos;s nightly work cycle begins.</p>
+      </div>
+
+      {/* Re-pick window */}
+      <div className="grid gap-2">
+        <Label className="text-xs font-medium">Re-pick Window (minutes)</Label>
+        <Select
+          value={String(autonomy.repickWindowMinutes)}
+          onValueChange={(v) => handleChange('repickWindowMinutes', Number(v))}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[30, 60, 90, 120, 180, 240].map(n => (
+              <SelectItem key={n} value={String(n)}>{n} min</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">If a task completes within this window, Gideon picks up another.</p>
+      </div>
+
+      {/* Due-date urgency window */}
+      <div className="grid gap-2">
+        <Label className="text-xs font-medium">Due-Date Urgency (hours)</Label>
+        <Select
+          value={String(autonomy.dueDateUrgencyHours)}
+          onValueChange={(v) => handleChange('dueDateUrgencyHours', Number(v))}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[12, 24, 36, 48, 72, 96].map(n => (
+              <SelectItem key={n} value={String(n)}>{n}h</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">Tasks due within this window are prioritised over normal priority ordering.</p>
+      </div>
+    </div>
+  );
+}
+
+// --- Settings Tabs Content (shared between mobile and desktop) ---
+function SettingsTabsContent() {
+  return (
+    <Tabs defaultValue="labels" className="w-full">
+      <TabsList className="w-full grid grid-cols-5">
+        <TabsTrigger value="labels" className="gap-1.5 text-xs">
+          <Tag className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Labels</span>
+        </TabsTrigger>
+        <TabsTrigger value="team" className="gap-1.5 text-xs">
+          <Users className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Team</span>
+        </TabsTrigger>
+        <TabsTrigger value="board" className="gap-1.5 text-xs">
+          <LayoutGrid className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Board</span>
+        </TabsTrigger>
+        <TabsTrigger value="chat" className="gap-1.5 text-xs">
+          <MessageSquare className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Chat</span>
+        </TabsTrigger>
+        <TabsTrigger value="autonomy" className="gap-1.5 text-xs">
+          <Bot className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Agent</span>
+        </TabsTrigger>
+      </TabsList>
+
+      <div className="mt-4 px-3">
+        <TabsContent value="labels">
+          <LabelsSection />
+        </TabsContent>
+        <TabsContent value="team">
+          <TeamMembersSection />
+        </TabsContent>
+        <TabsContent value="board">
+          <BoardSection />
+        </TabsContent>
+        <TabsContent value="chat">
+          <ChatSection />
+        </TabsContent>
+        <TabsContent value="autonomy">
+          <AutonomySection />
+        </TabsContent>
+      </div>
+    </Tabs>
+  );
+}
+
+// --- Mobile Settings Panel (full-screen, controlled by bottom nav) ---
+export function MobileSettingsPanel() {
+  return (
+    <div className="fixed inset-0 top-12 bottom-14 z-40 bg-background flex flex-col overflow-y-auto">
+      <div className="border-b border-border/50 px-4 py-3">
+        <h2 className="text-sm font-semibold">Settings</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Configure labels, team members, board defaults, and chat preferences.
+        </p>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        <SettingsTabsContent />
+      </div>
+    </div>
+  );
+}
+
+// --- Main Settings Panel (desktop Sheet) ---
 export function SettingsPanel() {
   const { isOpen, closeSettings } = useSettings();
 
@@ -456,41 +647,7 @@ export function SettingsPanel() {
           </SheetDescription>
         </SheetHeader>
 
-        <Tabs defaultValue="labels" className="w-full">
-          <TabsList className="w-full grid grid-cols-4">
-            <TabsTrigger value="labels" className="gap-1.5 text-xs">
-              <Tag className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Labels</span>
-            </TabsTrigger>
-            <TabsTrigger value="team" className="gap-1.5 text-xs">
-              <Users className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Team</span>
-            </TabsTrigger>
-            <TabsTrigger value="board" className="gap-1.5 text-xs">
-              <LayoutGrid className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Board</span>
-            </TabsTrigger>
-            <TabsTrigger value="chat" className="gap-1.5 text-xs">
-              <MessageSquare className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Chat</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="mt-4 px-3">
-            <TabsContent value="labels">
-              <LabelsSection />
-            </TabsContent>
-            <TabsContent value="team">
-              <TeamMembersSection />
-            </TabsContent>
-            <TabsContent value="board">
-              <BoardSection />
-            </TabsContent>
-            <TabsContent value="chat">
-              <ChatSection />
-            </TabsContent>
-          </div>
-        </Tabs>
+        <SettingsTabsContent />
       </SheetContent>
     </Sheet>
   );

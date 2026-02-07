@@ -1,6 +1,6 @@
 import { supabase } from './client';
 import { dbAgentStateToAgentState } from './mappers';
-import type { AgentState, DbAgentState } from '@/types';
+import type { AgentState, AutonomyConfig, DbAgentState } from '@/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const TABLE = 'agent_state';
@@ -29,6 +29,32 @@ export async function updateAgentState(
   const { data, error } = await supabase
     .from(TABLE)
     .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('agent_id', AGENT_ID)
+    .select()
+    .single();
+
+  if (error || !data) return null;
+  return dbAgentStateToAgentState(data as DbAgentState);
+}
+
+/**
+ * Update autonomy configuration fields on agent_state.
+ */
+export async function updateAutonomyConfig(
+  config: Partial<AutonomyConfig>
+): Promise<AgentState | null> {
+  const dbFields: Record<string, unknown> = {};
+  if (config.autoPickupEnabled !== undefined) dbFields.auto_pickup_enabled = config.autoPickupEnabled;
+  if (config.maxConcurrentTasks !== undefined) dbFields.max_concurrent_tasks = config.maxConcurrentTasks;
+  if (config.nightlyStartHour !== undefined) dbFields.nightly_start_hour = config.nightlyStartHour;
+  if (config.repickWindowMinutes !== undefined) dbFields.repick_window_minutes = config.repickWindowMinutes;
+  if (config.dueDateUrgencyHours !== undefined) dbFields.due_date_urgency_hours = config.dueDateUrgencyHours;
+
+  dbFields.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update(dbFields)
     .eq('agent_id', AGENT_ID)
     .select()
     .single();

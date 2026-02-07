@@ -6,6 +6,9 @@ import { TaskProvider } from '@/contexts/task-context';
 import { ChatPanel } from '@/components/chat/chat-panel';
 import { SettingsProvider } from '@/contexts/settings-context';
 import { SettingsPanel } from '@/components/settings/settings-panel';
+import { MobileViewProvider } from '@/contexts/mobile-view-context';
+import { BottomNav } from '@/components/layout/bottom-nav';
+import { MobileSettingsWrapper } from '@/components/layout/mobile-settings-wrapper';
 
 export default function AppLayout({
   children,
@@ -17,14 +20,18 @@ export default function AppLayout({
       <ChatProvider>
         <SettingsProvider>
           <TaskProvider>
-            <div className="flex h-screen flex-col overflow-hidden">
-              <Header />
-              <div className="flex flex-1 overflow-hidden">
-                <MainContent>{children}</MainContent>
-                <ChatPanel />
+            <MobileViewProvider>
+              <div className="flex h-screen flex-col overflow-hidden">
+                <Header />
+                <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
+                  <MainContent>{children}</MainContent>
+                  <ChatPanel />
+                </div>
+                <BottomNav />
               </div>
-            </div>
-            <SettingsPanel />
+              <SettingsPanel />
+              <MobileSettingsWrapper />
+            </MobileViewProvider>
           </TaskProvider>
         </SettingsProvider>
       </ChatProvider>

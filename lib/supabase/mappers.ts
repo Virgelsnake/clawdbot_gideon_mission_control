@@ -78,6 +78,13 @@ export function dbAgentStateToAgentState(row: DbAgentState): AgentState {
     modelList: row.model_list ?? [],
     lastHeartbeat: row.last_heartbeat ?? undefined,
     updatedAt: row.updated_at ?? undefined,
+    autonomy: {
+      autoPickupEnabled: row.auto_pickup_enabled ?? true,
+      maxConcurrentTasks: row.max_concurrent_tasks ?? 1,
+      nightlyStartHour: row.nightly_start_hour ?? 22,
+      repickWindowMinutes: row.repick_window_minutes ?? 120,
+      dueDateUrgencyHours: row.due_date_urgency_hours ?? 48,
+    },
   };
 }
 

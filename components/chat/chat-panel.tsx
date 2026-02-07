@@ -8,25 +8,27 @@ import { PanelRightClose, MessageSquare, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat } from '@/contexts/chat-context';
 import { useAgent } from '@/contexts/agent-context';
+import { useMobileView } from '@/contexts/mobile-view-context';
 import { sendMessage } from '@/lib/api/chat';
 import { toast } from 'sonner';
 import { ChatPanelHeader } from './chat-panel-header';
 
 export function ChatPanel() {
   const [isOpen, setIsOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isTabletOverlay, setIsTabletOverlay] = useState(false);
   const { messages, addMessage, appendToLastMessage, setStreaming, persistLastAssistantMessage, clearMessages } = useChat();
   const { currentModel, setStatus } = useAgent();
+  const { isMobile, activeTab } = useMobileView();
 
-  // Handle responsive detection
+  // Handle tablet overlay detection (640px–1024px)
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
+    const checkTablet = () => {
+      setIsTabletOverlay(window.innerWidth >= 640 && window.innerWidth < 1024);
     };
 
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    checkTablet();
+    window.addEventListener('resize', checkTablet);
+    return () => window.removeEventListener('resize', checkTablet);
   }, []);
 
   const handleSendMessage = useCallback(
@@ -70,24 +72,68 @@ export function ChatPanel() {
     [messages, addMessage, appendToLastMessage, setStreaming, persistLastAssistantMessage, currentModel, setStatus]
   );
 
+  // Mobile: full-screen chat controlled by bottom nav tab
+  if (isMobile) {
+    if (activeTab !== 'chat') return null;
+
+    return (
+      <aside className="fixed inset-0 top-12 bottom-14 z-40 bg-background flex flex-col">
+        <div className="flex items-center justify-between border-b border-border/50 px-3 py-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-medium">Chat</h2>
+            {messages.length > 0 && (
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {messages.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  clearMessages();
+                  toast.success('Conversation cleared');
+                }}
+                aria-label="Clear conversation"
+                className="hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+        <ChatPanelHeader />
+        <div className="flex-1 overflow-hidden px-1 py-2">
+          <MessageList />
+        </div>
+        <ChatInput onSendMessage={handleSendMessage} />
+      </aside>
+    );
+  }
+
+  // Desktop / Tablet: collapsible side panel
   if (!isOpen) {
     return (
       <>
-        {/* Mobile: fixed FAB at bottom-right */}
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={() => setIsOpen(true)}
-          className="fixed right-4 bottom-4 z-[100] h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow lg:hidden"
-          aria-label="Open chat panel"
-        >
-          <div className="relative">
-            <MessageSquare className="h-6 w-6" />
-            {messages.length > 0 && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary" />
-            )}
-          </div>
-        </Button>
+        {/* Tablet: fixed FAB at bottom-right */}
+        {isTabletOverlay && (
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={() => setIsOpen(true)}
+            className="fixed right-4 bottom-4 z-[100] h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow"
+            aria-label="Open chat panel"
+          >
+            <div className="relative">
+              <MessageSquare className="h-6 w-6" />
+              {messages.length > 0 && (
+                <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary" />
+              )}
+            </div>
+          </Button>
+        )}
         {/* Desktop: sits in the same layout slot as the chat panel */}
         <aside className="hidden lg:flex border-l border-border/50 bg-background flex-col items-center pt-[13px] px-1">
           <Button
@@ -106,8 +152,8 @@ export function ChatPanel() {
 
   return (
     <>
-      {/* Mobile overlay */}
-      {isMobile && (
+      {/* Tablet overlay */}
+      {isTabletOverlay && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 animate-in fade-in duration-200"
           onClick={() => setIsOpen(false)}
@@ -116,7 +162,7 @@ export function ChatPanel() {
       )}
       <aside className={cn(
         "border-l border-border/50 bg-background flex flex-col z-[100] transition-all duration-300 ease-out",
-        isMobile 
+        isTabletOverlay 
           ? "fixed inset-x-4 top-16 bottom-4 rounded-xl shadow-2xl max-w-md mx-auto h-auto" 
           : "w-80 relative"
       )}>

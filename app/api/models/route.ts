@@ -54,7 +54,8 @@ export async function GET() {
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );
-  } catch {
+  } catch (err: unknown) {
+    console.error('[/api/models] Error fetching models:', err instanceof Error ? err.message : String(err));
     return Response.json(
       {
         ok: true,

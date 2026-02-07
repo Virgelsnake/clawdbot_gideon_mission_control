@@ -26,8 +26,9 @@ export async function GET() {
       { ok: true, models: results, currentModel: primaryModel },
       { headers: { 'Cache-Control': 'no-store' } }
     );
-  } catch (err) {
+  } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
+    console.error('[/api/models/health] Error:', msg);
     return Response.json(
       { ok: true, models: [], error: msg.slice(0, 200) },
       { headers: { 'Cache-Control': 'no-store' } }

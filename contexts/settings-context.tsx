@@ -132,11 +132,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
-  const persist = useCallback((next: AppSettings) => {
-    setSettings(next);
-    saveSettings(next);
-  }, []);
-
   const openSettings = useCallback(() => setIsOpen(true), []);
   const closeSettings = useCallback(() => setIsOpen(false), []);
 

@@ -75,8 +75,6 @@ export async function POST(req: NextRequest) {
 
   // Await sessions_send — the gateway runs the agent synchronously and returns
   // the reply inline when status is "ok". Only fall back to polling on "timeout".
-  console.log(`[DIAG][/api/chat-bridge] Calling sessions_send, sessionKey=${SESSION_KEY}`);
-
   type SendResult = { status?: string; reply?: string; sessionKey?: string };
   let sendResult: SendResult = {};
 
@@ -87,10 +85,9 @@ export async function POST(req: NextRequest) {
     }, undefined, 120_000);
     const resultJson = extractToolJson<SendResult>(inv);
     sendResult = resultJson;
-    console.log(`[DIAG][/api/chat-bridge] sessions_send result: status=${resultJson.status}, reply=${String(resultJson.reply ?? '').slice(0, 100)}`);
   } catch (sendErr) {
     const msg = sendErr instanceof Error ? sendErr.message : String(sendErr);
-    console.error(`[DIAG][/api/chat-bridge] sessions_send FAILED: ${msg}`);
+    console.error(`[/api/chat-bridge] sessions_send failed: ${msg}`);
     return jsonError(500, { code: 'internal_error', message: 'sessions_send failed', details: msg });
   }
 
@@ -103,7 +100,6 @@ export async function POST(req: NextRequest) {
   }
 
   // Agent timed out or no inline reply — fall back to polling session history.
-  console.log(`[DIAG][/api/chat-bridge] No inline reply (status=${sendResult.status}), falling back to polling`);
   const start = Date.now();
   const deadline = start + 60_000;
 
@@ -113,7 +109,7 @@ export async function POST(req: NextRequest) {
       inv = await gatewayToolInvoke('sessions_history', { sessionKey: SESSION_KEY, limit: 30 });
     } catch (histErr) {
       const msg = histErr instanceof Error ? histErr.message : String(histErr);
-      console.error(`[DIAG][/api/chat-bridge] sessions_history FAILED: ${msg}`);
+      console.error(`[/api/chat-bridge] sessions_history failed: ${msg}`);
       return jsonError(500, { code: 'internal_error', message: 'sessions_history failed', details: msg });
     }
     const hist = extractToolJson<SessionsHistory>(inv);

@@ -45,7 +45,11 @@ const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'bg-red-100 text-red-600',
 };
 
-export function TaskList() {
+interface TaskListProps {
+  onTaskClick?: (task: Task) => void;
+}
+
+export function TaskList({ onTaskClick }: TaskListProps) {
   const { filteredTasks, moveTask, deleteTask } = useTask();
   const [sort, setSort] = useState<SortConfig>({ field: 'createdAt', direction: 'desc' });
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -217,7 +221,8 @@ export function TaskList() {
             {sortedTasks.map((task) => (
               <tr
                 key={task.id}
-                className="group hover:bg-muted/50 transition-colors"
+                className="group hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={() => onTaskClick?.(task)}
               >
                 <td className="py-3 px-4">
                   <div className="flex items-start gap-2">

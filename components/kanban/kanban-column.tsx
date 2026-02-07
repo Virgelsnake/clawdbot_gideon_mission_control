@@ -12,6 +12,7 @@ interface KanbanColumnProps {
   color: string;
   bgColor: string;
   tasks: Task[];
+  onTaskClick?: (task: Task) => void;
 }
 
 const COLUMN_DOT_COLORS: Record<ColumnType, string> = {
@@ -22,7 +23,7 @@ const COLUMN_DOT_COLORS: Record<ColumnType, string> = {
   done: 'bg-emerald-500',
 };
 
-export function KanbanColumn({ id, title, tasks }: KanbanColumnProps) {
+export function KanbanColumn({ id, title, tasks, onTaskClick }: KanbanColumnProps) {
   const [mounted, setMounted] = useState(false);
   const { isOver, setNodeRef } = useDroppable({
     id,
@@ -59,7 +60,7 @@ export function KanbanColumn({ id, title, tasks }: KanbanColumnProps) {
         isOver ? 'bg-primary/[0.02]' : ''
       }`}>
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+          <TaskCard key={task.id} task={task} onTaskClick={onTaskClick} />
         ))}
         {isOver && tasks.length === 0 && (
           <div className="h-20 rounded-lg border-2 border-dashed border-primary/30 bg-primary/[0.03] flex items-center justify-center">

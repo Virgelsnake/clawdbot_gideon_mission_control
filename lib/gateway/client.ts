@@ -73,8 +73,6 @@ export async function gatewayFetch(path: string, init: RequestInit, timeoutMs = 
     Authorization: `Bearer ${token}`,
   };
 
-  console.log(`[DIAG][gatewayFetch] ${init.method ?? 'GET'} ${fullUrl} (timeout=${timeoutMs}ms)`);
   const res = await fetchWithTimeout(fullUrl, { ...init, headers }, timeoutMs);
-  console.log(`[DIAG][gatewayFetch] Response: status=${res.status}, content-type=${res.headers.get('content-type')}`);
   return res;
 }

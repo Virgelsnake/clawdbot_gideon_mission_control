@@ -65,7 +65,7 @@ function IdeaCard({ idea }: { idea: { id: string; content: string; createdAt: nu
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+              className="h-6 w-6 sm:h-5 sm:w-5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
               onClick={handleDelete}
               title="Delete idea"
             >
@@ -78,7 +78,11 @@ function IdeaCard({ idea }: { idea: { id: string; content: string; createdAt: nu
   );
 }
 
-export function IdeasPanel() {
+interface IdeasPanelProps {
+  mobile?: boolean;
+}
+
+export function IdeasPanel({ mobile }: IdeasPanelProps) {
   const { ideas, loading } = useTask();
   const [mounted, setMounted] = useState(false);
 
@@ -88,7 +92,7 @@ export function IdeasPanel() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col border-r border-border/50 bg-muted/20 w-72">
+    <div className={mobile ? "flex h-full flex-col bg-background" : "flex h-full flex-col border-r border-border/50 bg-muted/20 w-72"}>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/50 px-3 py-2.5">
         <div className="flex items-center gap-2">
