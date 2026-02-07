@@ -1,8 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { readFile } from 'fs/promises';
+import { isGatewayTunnel } from '@/lib/gateway/client';
 
-const execAsync = promisify(exec);
 const OPENCLAW_CLI = '/usr/local/bin/openclaw';
 const OPENCLAW_CONFIG = '/Users/gideon/.openclaw/openclaw.json';
 const CACHE_TTL_MS = 120_000; // 2 minutes
@@ -36,6 +33,9 @@ let cacheTimestamp = 0;
 let fetchPromise: Promise<CachedModel[]> | null = null;
 
 async function fetchFromCLI(): Promise<CachedModel[]> {
+  const { exec } = await import('child_process');
+  const { promisify } = await import('util');
+  const execAsync = promisify(exec);
   const { stdout } = await execAsync(`${OPENCLAW_CLI} models list --all --json 2>/dev/null`, {
     timeout: CLI_TIMEOUT_MS,
     maxBuffer: 4 * 1024 * 1024,
@@ -51,6 +51,7 @@ async function fetchFromCLI(): Promise<CachedModel[]> {
 }
 
 async function fetchFromConfig(): Promise<CachedModel[]> {
+  const { readFile } = await import('fs/promises');
   const raw = await readFile(OPENCLAW_CONFIG, 'utf-8');
   const config = JSON.parse(raw) as { agents?: { defaults?: { models?: Record<string, unknown> } } };
   const configModels = config?.agents?.defaults?.models;
@@ -128,6 +129,13 @@ export type GatewayConfig = {
  * This is the source of truth for what the gateway can actually use.
  */
 export async function getConfiguredModels(): Promise<GatewayConfig> {
+  // In tunnel/production mode, we can't read the local config file.
+  // Return empty defaults — model info comes from Supabase agent_state instead.
+  if (isGatewayTunnel()) {
+    return { configuredModels: [], primaryModel: 'default' };
+  }
+
+  const { readFile } = await import('fs/promises');
   const raw = await readFile(OPENCLAW_CONFIG, 'utf-8');
   const config = JSON.parse(raw) as {
     agents?: { defaults?: { model?: { primary?: string }; models?: Record<string, unknown> } };

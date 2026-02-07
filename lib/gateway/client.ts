@@ -4,17 +4,27 @@ type GatewayEnv = {
 };
 
 export function getGatewayEnv(): GatewayEnv {
-  const url =
+  // In production, prefer the tunnel URL for remote access to the local gateway
+  const tunnelUrl = process.env.OPENCLAW_GATEWAY_TUNNEL_URL;
+  const localUrl =
     process.env.OPENCLAW_GATEWAY_URL ||
     process.env.CLAWDBOT_GATEWAY_URL ||
     process.env.CLAWDBOT_API_URL ||
     'http://127.0.0.1:18789';
+
+  const url = tunnelUrl || localUrl;
+
   const token =
     process.env.OPENCLAW_GATEWAY_TOKEN ||
     process.env.CLAWDBOT_GATEWAY_TOKEN ||
     process.env.CLAWDBOT_API_TOKEN ||
     '';
   return { url, token };
+}
+
+/** Returns true if the gateway is configured to use a remote tunnel */
+export function isGatewayTunnel(): boolean {
+  return !!process.env.OPENCLAW_GATEWAY_TUNNEL_URL;
 }
 
 export class TimeoutError extends Error {

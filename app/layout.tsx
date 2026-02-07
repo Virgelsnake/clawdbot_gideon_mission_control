@@ -1,14 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/providers/theme-provider';
-import { AgentProvider } from '@/contexts/agent-context';
-import { Header } from '@/components/layout/header';
-import { MainContent } from '@/components/layout/main-content';
-import { ChatProvider } from '@/contexts/chat-context';
-import { TaskProvider } from '@/contexts/task-context';
-import { ChatPanel } from '@/components/chat/chat-panel';
-import { SettingsProvider } from '@/contexts/settings-context';
-import { SettingsPanel } from '@/components/settings/settings-panel';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
@@ -23,9 +15,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Gideon Mission Control',
-  description: 'PWA dashboard for managing and monitoring the ClawdBot Gideon autonomous AI agent',
+  title: 'Mission Control',
+  description: 'PWA dashboard for managing and monitoring the Gideon autonomous AI agent',
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Mission Control',
+  },
+  icons: {
+    apple: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
@@ -51,23 +53,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AgentProvider>
-            <ChatProvider>
-              <SettingsProvider>
-                <TaskProvider>
-                  <div className="flex h-screen flex-col overflow-hidden">
-                    <Header />
-                    <div className="flex flex-1 overflow-hidden">
-                      <MainContent>{children}</MainContent>
-                      <ChatPanel />
-                    </div>
-                  </div>
-                  <SettingsPanel />
-                  <Toaster />
-                </TaskProvider>
-              </SettingsProvider>
-            </ChatProvider>
-          </AgentProvider>
+          {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

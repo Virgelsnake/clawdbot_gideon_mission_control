@@ -37,6 +37,15 @@ yarn-error.log*
 # vercel
 .vercel
 
+# netlify
+.netlify
+
+# serwist generated service worker
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+public/workbox-*.js
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

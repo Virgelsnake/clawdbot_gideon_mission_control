@@ -53,14 +53,15 @@ No new framework dependencies expected. Key additions:
 
 | ID | Story |
 |----|-------|
-| US-3.1 | As an operator, I want Gideon to automatically pick up unassigned tasks so work progresses without my intervention. |
+| US-3.1 | As an operator, I want Gideon to automatically pick up unassigned tasks every night at 10 PM so work progresses overnight without my intervention. |
 | US-3.2 | As an operator, I want to see an activity log of all changes so I can audit what Gideon has done. |
-| US-3.3 | As an operator, I want to configure Gideon's autonomy level (e.g., auto-pickup on/off, max concurrent tasks). |
-| US-3.4 | As an operator, I want Gideon to triage ideas and suggest which should become tasks. |
+| US-3.3 | As an operator, I want to configure Gideon's autonomy level (e.g., auto-pickup on/off, nightly schedule, max concurrent tasks). |
+| US-3.4 | As an operator, I want Gideon to triage the ideas backlog nightly and suggest which should become tasks. |
 | US-3.5 | As an operator, I want to filter the activity log by actor (Steve vs Gideon), action type, and date range. |
-| US-3.6 | As Gideon, I want to self-assign tasks from the backlog based on priority so I can work autonomously. |
-| US-3.7 | As Gideon, I want to move tasks through columns (todo → in-progress → review → done) as I complete work. |
-| US-3.8 | As Gideon, I want to add notes/comments to tasks to document my progress. |
+| US-3.6 | As Gideon, I want to self-assign tasks from the backlog based on due-date urgency and priority so I can work autonomously. |
+| US-3.7 | As Gideon, I want to move tasks directly to 'done' when complete — I am fully autonomous with no approval gate. |
+| US-3.8 | As Gideon, I want to pick up another task if I finish one within 2 hours of the nightly cycle start. |
+| US-3.9 | As Gideon, I want to add notes/comments to tasks to document my progress. |
 
 ---
 
@@ -68,19 +69,24 @@ No new framework dependencies expected. Key additions:
 
 ### 6.1 Autonomous Task Pickup
 
-- **FR-1.1:** Gideon polls the `tasks` table on a configurable interval (default: every 5 minutes when idle)
-- **FR-1.2:** Pickup criteria: `column_status = 'todo'`, `assignee IS NULL OR assignee = 'gideon'`, ordered by priority (urgent > high > medium > low), then `created_at` ASC
+- **FR-1.1:** Gideon runs a nightly task-pickup cycle triggered at **10:00 PM local time** via cron/LaunchAgent (configurable)
+- **FR-1.2:** Pickup criteria: `column_status = 'todo'`, `assignee IS NULL OR assignee = 'gideon'`, ordered by:
+  1. **Due-date urgency** — any task with `due_date` within the next 48 hours is promoted to the top of the queue regardless of priority level
+  2. **Priority** — urgent > high > medium > low
+  3. **Creation date** — `created_at` ASC (oldest first as tiebreaker)
 - **FR-1.3:** Gideon respects a configurable concurrency limit (default: 1 task at a time in `in-progress`)
 - **FR-1.4:** On pickup: set `assignee = 'gideon'`, `column_status = 'in-progress'`, update `agent_state.status = 'active'`
-- **FR-1.5:** On completion: set `column_status = 'review'` (not 'done' — Steve reviews first), update `agent_state.status = 'idle'`
-- **FR-1.6:** Gideon manages his own concurrency — Mission Control does not enforce guardrails (per briefing constraint)
+- **FR-1.5:** On completion: set `column_status = 'done'`, update `agent_state.status = 'idle'`. Gideon is fully autonomous — no human approval gate required.
+- **FR-1.6:** **Re-pick logic:** If Gideon completes a task within 2 hours of the nightly cycle start, he immediately checks for the next eligible task and picks it up. This repeats until either no eligible tasks remain or the 2-hour window has elapsed since the last completion.
+- **FR-1.7:** Gideon manages his own concurrency — Mission Control does not enforce guardrails (per briefing constraint)
 
 ### 6.2 Idea Management by Gideon
 
 - **FR-2.1:** Gideon can read all non-archived ideas via REST API
-- **FR-2.2:** Gideon can suggest task conversion by creating a task with `created_by = 'gideon'` and linking `ideas.converted_to_task_id`
-- **FR-2.3:** Gideon can archive stale ideas (set `archived = true`, `archived_at = now()`)
-- **FR-2.4:** UI shows a "Gideon suggested" badge on tasks created by the agent
+- **FR-2.2:** Gideon triages the ideas backlog as part of his **nightly 10 PM cycle**, before selecting tasks. Triage includes: flagging stale ideas, suggesting task conversions, and archiving resolved/duplicate ideas.
+- **FR-2.3:** Gideon can suggest task conversion by creating a task with `created_by = 'gideon'` and linking `ideas.converted_to_task_id`
+- **FR-2.4:** Gideon can archive stale ideas (set `archived = true`, `archived_at = now()`)
+- **FR-2.5:** UI shows a "Gideon suggested" badge on tasks created by the agent
 
 ### 6.3 Activity Log
 
@@ -109,8 +115,10 @@ No new framework dependencies expected. Key additions:
 - **FR-4.1:** New `agent_config` table or fields on `agent_state`:
   - `auto_pickup_enabled` BOOLEAN DEFAULT true
   - `max_concurrent_tasks` INTEGER DEFAULT 1
-  - `pickup_interval_seconds` INTEGER DEFAULT 300
-- **FR-4.2:** UI settings panel to toggle autonomy settings
+  - `nightly_start_hour` INTEGER DEFAULT 22 — hour (0–23) in local time when the nightly cycle begins
+  - `repick_window_minutes` INTEGER DEFAULT 120 — if a task completes within this window, Gideon picks up the next eligible task
+  - `due_date_urgency_hours` INTEGER DEFAULT 48 — tasks with due dates within this window are promoted to top priority
+- **FR-4.2:** UI settings panel to toggle autonomy settings (enable/disable auto-pickup, adjust schedule, concurrency limit)
 - **FR-4.3:** Gideon reads these settings before attempting pickup
 
 ### 6.5 Task Notes / Comments
@@ -135,13 +143,17 @@ No new framework dependencies expected. Key additions:
 
 | ID | Criterion | Test Method |
 |----|-----------|-------------|
-| AC-1 | Gideon automatically picks up an unassigned 'todo' task within the configured interval | Create unassigned task → wait → verify Gideon assigns and moves to in-progress |
-| AC-2 | Gideon respects max concurrent task limit | Set limit to 1, create 2 tasks → verify only 1 picked up |
-| AC-3 | Activity log records all task mutations with correct actor | Create/update/delete tasks as both Steve and Gideon → verify log entries |
-| AC-4 | Activity log filters work correctly | Filter by actor='gideon' → verify only Gideon's actions shown |
-| AC-5 | Autonomy settings are respected | Disable auto-pickup → verify Gideon stops picking up tasks |
-| AC-6 | Task comments appear in real-time | Gideon adds comment → verify it appears in UI within 2s |
-| AC-7 | Gideon-suggested tasks show badge | Gideon converts idea to task → verify "Gideon suggested" badge |
+| AC-1 | Gideon picks up an unassigned 'todo' task at the nightly 10 PM cycle | Create unassigned task → wait for 10 PM cycle → verify Gideon assigns and moves to in-progress |
+| AC-2 | Due-date urgency overrides priority | Create low-priority task due in 24h and high-priority task with no due date → verify due-date task is picked first |
+| AC-3 | Gideon moves completed tasks directly to 'done' | Gideon completes a task → verify `column_status = 'done'` (no review step) |
+| AC-4 | Re-pick logic works within 2-hour window | Gideon completes task < 2h after cycle start → verify he picks up next eligible task |
+| AC-5 | Gideon respects max concurrent task limit | Set limit to 1, create 2 tasks → verify only 1 picked up |
+| AC-6 | Activity log records all task mutations with correct actor | Create/update/delete tasks as both Steve and Gideon → verify log entries |
+| AC-7 | Activity log filters work correctly | Filter by actor='gideon' → verify only Gideon's actions shown |
+| AC-8 | Autonomy settings are respected | Disable auto-pickup → verify Gideon stops picking up tasks |
+| AC-9 | Task comments appear in real-time | Gideon adds comment → verify it appears in UI within 2s |
+| AC-10 | Gideon-suggested tasks show badge | Gideon converts idea to task → verify "Gideon suggested" badge |
+| AC-11 | Nightly idea triage runs before task pickup | Verify activity log shows idea triage entries timestamped before task pickup entries |
 
 **Test approach:**
 - **Unit tests:** Pickup criteria logic, log entry formatting
@@ -152,12 +164,16 @@ No new framework dependencies expected. Key additions:
 
 ## 8. Definition of Done
 
-- [ ] Gideon autonomously picks up and processes tasks based on priority
+- [ ] Gideon autonomously picks up and completes tasks on his nightly 10 PM cycle
+- [ ] Due-date urgency (48h window) correctly overrides priority ordering
+- [ ] Re-pick logic works: Gideon picks another task if finished within 2h
+- [ ] Gideon moves completed tasks directly to 'done' (no review gate)
+- [ ] Nightly idea triage runs before task pickup
 - [ ] Activity log captures all mutations with actor, action, and changes
 - [ ] Activity log UI with filtering and real-time updates
-- [ ] Autonomy configuration panel working
+- [ ] Autonomy configuration panel working (schedule, concurrency, enable/disable)
 - [ ] Task comments system working for both Steve and Gideon
-- [ ] All acceptance criteria pass
+- [ ] All acceptance criteria (AC-1 through AC-11) pass
 - [ ] `next build` passes cleanly
 - [ ] Documentation updated for Gideon's autonomous workflow
 
@@ -196,9 +212,20 @@ No new framework dependencies expected. Key additions:
 1. Activity log table + API route logging (foundation for auditability)
 2. Task comments table + UI
 3. Autonomy config table + settings UI
-4. Gideon autonomous pickup logic (instructions + polling)
-5. Idea management by Gideon
+4. Gideon nightly cycle logic (cron/LaunchAgent at 10 PM, idea triage → task pickup → re-pick loop)
+5. Idea management by Gideon (integrated into nightly triage step)
 6. Activity log UI (timeline panel)
+
+### Nightly Cycle Flow
+
+```
+10:00 PM — Cron triggers Gideon
+  ├── 1. Read autonomy config (auto_pickup_enabled, max_concurrent, etc.)
+  ├── 2. Triage ideas backlog (archive stale, suggest conversions)
+  ├── 3. Select highest-priority eligible task (due-date urgency → priority → age)
+  ├── 4. Pick up task → work → move to 'done'
+  └── 5. If completed within 2h of cycle start → goto step 3
+```
 
 ### Dependency on Phase 2
 
@@ -217,16 +244,19 @@ All Phase 3 work assumes Phase 2's Supabase CRUD, Realtime subscriptions, and ag
 
 ---
 
-## 14. Open Questions
+## 14. Resolved Questions
 
-1. **Review workflow** — Should Gideon move completed tasks to 'review' or 'done'? Recommend 'review' so Steve has approval gate.
-2. **Pickup priority weighting** — Should due date factor into pickup order alongside priority?
-3. **Idea triage frequency** — How often should Gideon review the ideas backlog?
-4. **Activity log retention** — Keep all logs forever, or prune after N days?
+1. **Review workflow** — ✅ **Gideon moves to 'done' directly.** He is fully autonomous — no human approval gate required.
+2. **Pickup priority weighting** — ✅ **Due date within 48 hours promotes to top of queue**, regardless of priority level. After that, standard priority ordering applies.
+3. **Idea triage frequency** — ✅ **Nightly at 10 PM**, as part of the same cycle as task pickup. Triage runs first, then task selection.
+
+## 15. Open Questions
+
+1. **Activity log retention** — Keep all logs forever, or prune after N days?
 
 ---
 
-## 15. Appendix: Source Notes
+## 16. Appendix: Source Notes
 
 | Source | Key Facts Extracted |
 |--------|--------------------|
