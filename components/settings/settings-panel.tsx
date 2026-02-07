@@ -313,17 +313,11 @@ function TeamMembersSection() {
       <div className="space-y-3">
         <Label className="text-xs font-medium">Add Team Member</Label>
         <div className="flex items-center gap-2">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white shrink-0"
-            style={{ backgroundColor: newColor }}
-          >
-            {newInitials || (newName ? autoInitials(newName) : '??')}
-          </div>
           <Input
             value={newName}
             onChange={e => setNewName(e.target.value)}
             placeholder="Name..."
-            className="h-8 text-sm flex-1"
+            className="h-8 text-sm w-[65%]"
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
           />
           <Input
@@ -333,12 +327,22 @@ function TeamMembersSection() {
             className="h-8 text-sm w-14"
             maxLength={2}
           />
-          <Button size="sm" onClick={handleAdd} disabled={!newName.trim()} className="h-8 gap-1">
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white shrink-0"
+            style={{ backgroundColor: newColor }}
+          >
+            {newInitials || (newName ? autoInitials(newName) : '??')}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <ColorPicker value={newColor} onChange={setNewColor} />
+          </div>
+          <Button size="sm" onClick={handleAdd} disabled={!newName.trim()} className="h-7 gap-1 shrink-0">
             <Plus className="h-3 w-3" />
             Add
           </Button>
         </div>
-        <ColorPicker value={newColor} onChange={setNewColor} />
       </div>
     </div>
   );
@@ -472,7 +476,7 @@ export function SettingsPanel() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="mt-4">
+          <div className="mt-4 px-3">
             <TabsContent value="labels">
               <LabelsSection />
             </TabsContent>
