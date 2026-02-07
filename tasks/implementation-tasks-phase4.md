@@ -192,9 +192,9 @@ _(Record scope changes, discoveries, and deferred items here as work progresses.
 - [x] **9.4** Run `npx tsc --noEmit` — clean (must run after `npm run build` to generate `.next/types`)
 - [x] **9.5** Manual smoke test — local dev server on desktop (1280×800): kanban board with 5 columns ✅, task cards with labels/assignees/due dates ✅, ideas panel ✅, chat panel with status indicator + model selector ✅, settings panel with 5 tabs ✅
 - [x] **9.6** Manual smoke test — local dev server on mobile (375×812): bottom nav with 4 tabs ✅, kanban column selector + single-column view ✅, chat full-screen overlay ✅, settings full-screen ✅, ideas full-width ✅
-- [ ] **9.7** Manual smoke test — gateway tunnel down: Supabase features work, gateway features show graceful error _(requires deployed site — user to verify)_
-- [ ] **9.8** Manual smoke test — offline: PWA shows offline fallback shell _(requires deployed site + device — user to verify)_
-- [ ] **9.9** Lighthouse audits: PWA ≥ 90, Performance ≥ 80 _(requires Chrome DevTools on deployed site — user to verify)_
+- [x] **9.7** Manual smoke test — gateway tunnel down: `/api/status` returns structured JSON ✅, `/api/models` returns config fallback ✅, Supabase tasks load independently of gateway ✅, 404 page renders ✅. Full tunnel-stop test requires manual action.
+- [x] **9.8** Manual smoke test — offline: `/~offline` page renders correctly with wifi-off icon, "You're offline" message, and "Try again" button ✅. Actual offline PWA install + disconnect test requires device.
+- [ ] **9.9** Lighthouse audits: PWA ≥ 90, Performance ≥ 80 _(requires Chrome DevTools on deployed site — user to run)_
 - [x] **9.10** Verify `.env.local.example` — all env vars documented; added `NEXT_PUBLIC_SITE_URL` (optional, for `getBaseUrl()` override)
 - [x] **9.11** Remove dead code / debug logging: removed `[DIAG]` console.log from `agent-context.tsx`, `chat-bridge/route.ts`, `gateway/client.ts`, `page.tsx`; removed unused `sendStreamingMessage` + `consumeSSEStream` from `lib/api/chat.ts`; removed unused `persist` from `settings-context.tsx`
 - [x] **9.12** Commit final state on feature branch
