@@ -177,7 +177,7 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col overflow-hidden">
+      <SheetContent side="right" showOverlay={false} className="w-full sm:max-w-lg flex flex-col overflow-hidden">
         <SheetHeader className="flex-shrink-0">
           <SheetTitle className="text-lg leading-tight pr-6">{task.title}</SheetTitle>
           <SheetDescription className="sr-only">Task details and comments</SheetDescription>
