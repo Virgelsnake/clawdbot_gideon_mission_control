@@ -9,6 +9,7 @@ import { SettingsPanel } from '@/components/settings/settings-panel';
 import { MobileViewProvider } from '@/contexts/mobile-view-context';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { MobileSettingsWrapper } from '@/components/layout/mobile-settings-wrapper';
+import { UIProvider } from '@/contexts/ui-context';
 
 export default function AppLayout({
   children,
@@ -21,16 +22,18 @@ export default function AppLayout({
         <SettingsProvider>
           <TaskProvider>
             <MobileViewProvider>
-              <div className="flex h-screen flex-col overflow-hidden">
-                <Header />
-                <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
-                  <MainContent>{children}</MainContent>
-                  <ChatPanel />
+              <UIProvider>
+                <div className="flex h-screen flex-col overflow-hidden">
+                  <Header />
+                  <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
+                    <MainContent>{children}</MainContent>
+                    <ChatPanel />
+                  </div>
+                  <BottomNav />
                 </div>
-                <BottomNav />
-              </div>
-              <SettingsPanel />
-              <MobileSettingsWrapper />
+                <SettingsPanel />
+                <MobileSettingsWrapper />
+              </UIProvider>
             </MobileViewProvider>
           </TaskProvider>
         </SettingsProvider>

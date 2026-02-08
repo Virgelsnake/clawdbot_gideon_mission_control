@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useChat } from '@/contexts/chat-context';
 import { useAgent } from '@/contexts/agent-context';
 import { useMobileView } from '@/contexts/mobile-view-context';
+import { useUI } from '@/contexts/ui-context';
 import { sendMessage } from '@/lib/api/chat';
 import { toast } from 'sonner';
 import { ChatPanelHeader } from './chat-panel-header';
@@ -19,6 +20,7 @@ export function ChatPanel() {
   const { messages, addMessage, appendToLastMessage, setStreaming, persistLastAssistantMessage, clearMessages } = useChat();
   const { currentModel, setStatus } = useAgent();
   const { isMobile, activeTab } = useMobileView();
+  const { isTaskDetailOpen, wasChatPanelOpenBeforeTask, setWasChatPanelOpenBeforeTask } = useUI();
 
   // Handle tablet overlay detection (640px–1024px)
   useEffect(() => {
@@ -30,6 +32,20 @@ export function ChatPanel() {
     window.addEventListener('resize', checkTablet);
     return () => window.removeEventListener('resize', checkTablet);
   }, []);
+
+  // Auto-collapse chat when task detail opens, restore when it closes
+  useEffect(() => {
+    if (isMobile) return; // Don't auto-collapse on mobile
+
+    if (isTaskDetailOpen) {
+      // Task opened: remember current state and collapse chat
+      setWasChatPanelOpenBeforeTask(isOpen);
+      setIsOpen(false);
+    } else {
+      // Task closed: restore chat to its previous state
+      setIsOpen(wasChatPanelOpenBeforeTask);
+    }
+  }, [isTaskDetailOpen, isMobile]); // Run when task detail opens/closes
 
   const handleSendMessage = useCallback(
     async (content: string) => {

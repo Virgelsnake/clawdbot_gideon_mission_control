@@ -19,6 +19,7 @@ import { TaskCard } from './task-card';
 import { TaskList } from './task-list';
 import { TaskDetailDialog } from './task-detail-dialog';
 import { useState, useEffect, useCallback } from 'react';
+import { useUI } from '@/contexts/ui-context';
 
 type ViewMode = 'board' | 'list';
 
@@ -46,6 +47,12 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
   const [mobileColumn, setMobileColumn] = useState<ColumnType>('todo');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const { setTaskDetailOpen } = useUI();
+
+  // Sync task detail state with UI context
+  useEffect(() => {
+    setTaskDetailOpen(detailOpen);
+  }, [detailOpen, setTaskDetailOpen]);
 
   const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
