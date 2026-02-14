@@ -7,10 +7,13 @@ import { ActiveFilters } from './active-filters';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import {
   SortAsc,
   LayoutGrid,
   List,
+  Search,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { KanbanColumn as ColumnType, Task } from '@/types';
@@ -41,7 +44,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ mobile }: KanbanBoardProps) {
-  const { tasks, filteredTasks, loading } = useTask();
+  const { tasks, filteredTasks, loading, filters, setFilter } = useTask();
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('board');
   const [mobileColumn, setMobileColumn] = useState<ColumnType>('todo');
@@ -85,16 +88,36 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
     return (
       <div className="flex h-full flex-col bg-background">
         {/* Mobile Header */}
-        <div className="flex items-center justify-between border-b border-border/50 px-4 py-2.5">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold">Board</h2>
-            <Badge variant="secondary" className="text-xs font-normal">
-              {mounted ? filteredCount : 0}
-            </Badge>
+        <div className="flex flex-col gap-2 border-b border-border/50 px-4 py-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold">Board</h2>
+              <Badge variant="secondary" className="text-xs font-normal">
+                {mounted ? filteredCount : 0}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <FilterDropdown />
+              <AddTaskDialog />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <FilterDropdown />
-            <AddTaskDialog />
+          {/* Mobile Search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search tasks..."
+              value={filters.search}
+              onChange={(e) => setFilter('search', e.target.value)}
+              className="h-8 w-full pl-9 pr-8 text-sm"
+            />
+            {filters.search && (
+              <button
+                onClick={() => setFilter('search', '')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 hover:bg-muted"
+              >
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -168,6 +191,24 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
             </Badge>
           </div>
           <div className="flex items-center gap-2">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks..."
+                value={filters.search}
+                onChange={(e) => setFilter('search', e.target.value)}
+                className="h-8 w-64 pl-9 pr-8 text-sm"
+              />
+              {filters.search && (
+                <button
+                  onClick={() => setFilter('search', '')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 hover:bg-muted"
+                >
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
             <FilterDropdown />
             {viewMode === 'board' && (
               <Button variant="outline" size="sm" className="gap-2">
