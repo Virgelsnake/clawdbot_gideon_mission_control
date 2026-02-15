@@ -109,3 +109,163 @@ export function messageToDbMessage(
   if (msg.session_id !== undefined) row.session_id = msg.session_id;
   return row;
 }
+
+// --- Second Brain mappers ---
+
+import type {
+  ConversationCard,
+  CardTag,
+  ConversationSegment,
+  TagDefinition,
+  RelatedCard,
+  AutoGenerationRule,
+  CardGenerationQueue,
+  DbConversationCard,
+  DbCardTag,
+  DbConversationSegment,
+  DbTagDefinition,
+  DbRelatedCard,
+  DbAutoGenerationRule,
+  DbCardGenerationQueue,
+} from '@/types';
+
+export function dbCardToCard(row: DbConversationCard): ConversationCard {
+  return {
+    id: row.id,
+    title: row.title,
+    summary: row.summary,
+    content: row.content,
+    sourceType: row.source_type,
+    sourceId: row.source_id ?? undefined,
+    sourceUrl: row.source_url ?? undefined,
+    sessionId: row.session_id,
+    userId: row.user_id,
+    importance: row.importance,
+    status: row.status,
+    conversationDate: new Date(row.conversation_date).getTime(),
+    createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime(),
+    archivedAt: row.archived_at ? new Date(row.archived_at).getTime() : undefined,
+  };
+}
+
+export function cardToDbCard(
+  card: Partial<ConversationCard> & { id?: string }
+): Partial<DbConversationCard> {
+  const row: Partial<DbConversationCard> = {};
+  if (card.id !== undefined) row.id = card.id;
+  if (card.title !== undefined) row.title = card.title;
+  if (card.summary !== undefined) row.summary = card.summary;
+  if (card.content !== undefined) row.content = card.content;
+  if (card.sourceType !== undefined) row.source_type = card.sourceType;
+  if (card.sourceId !== undefined) row.source_id = card.sourceId ?? null;
+  if (card.sourceUrl !== undefined) row.source_url = card.sourceUrl ?? null;
+  if (card.sessionId !== undefined) row.session_id = card.sessionId;
+  if (card.userId !== undefined) row.user_id = card.userId;
+  if (card.importance !== undefined) row.importance = card.importance;
+  if (card.status !== undefined) row.status = card.status;
+  if (card.conversationDate !== undefined) row.conversation_date = new Date(card.conversationDate).toISOString();
+  if (card.archivedAt !== undefined) row.archived_at = card.archivedAt ? new Date(card.archivedAt).toISOString() : null;
+  return row;
+}
+
+export function dbCardTagToCardTag(row: DbCardTag): CardTag {
+  return {
+    id: row.id,
+    cardId: row.card_id,
+    tag: row.tag,
+    confidence: row.confidence,
+    extractedBy: row.extracted_by,
+    createdAt: new Date(row.created_at).getTime(),
+  };
+}
+
+export function dbSegmentToSegment(row: DbConversationSegment): ConversationSegment {
+  return {
+    id: row.id,
+    cardId: row.card_id,
+    role: row.role,
+    content: row.content,
+    timestamp: new Date(row.timestamp).getTime(),
+    sequenceOrder: row.sequence_order,
+    metadata: row.metadata ?? undefined,
+    createdAt: new Date(row.created_at).getTime(),
+  };
+}
+
+export function segmentToDbSegment(
+  segment: Partial<ConversationSegment> & { id?: string }
+): Partial<DbConversationSegment> {
+  const row: Partial<DbConversationSegment> = {};
+  if (segment.id !== undefined) row.id = segment.id;
+  if (segment.cardId !== undefined) row.card_id = segment.cardId;
+  if (segment.role !== undefined) row.role = segment.role;
+  if (segment.content !== undefined) row.content = segment.content;
+  if (segment.timestamp !== undefined) row.timestamp = new Date(segment.timestamp).toISOString();
+  if (segment.sequenceOrder !== undefined) row.sequence_order = segment.sequenceOrder;
+  if (segment.metadata !== undefined) row.metadata = segment.metadata ?? null;
+  return row;
+}
+
+export function dbTagDefinitionToTagDefinition(row: DbTagDefinition): TagDefinition {
+  return {
+    id: row.id,
+    tag: row.tag,
+    description: row.description ?? undefined,
+    color: row.color,
+    category: row.category,
+    autoExtractPattern: row.auto_extract_pattern ?? undefined,
+    usageCount: row.usage_count,
+    createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime(),
+  };
+}
+
+export function dbRelatedCardToRelatedCard(row: DbRelatedCard): RelatedCard {
+  return {
+    id: row.id,
+    sourceCardId: row.source_card_id,
+    targetCardId: row.target_card_id,
+    relationshipType: row.relationship_type,
+    confidence: row.confidence,
+    createdAt: new Date(row.created_at).getTime(),
+  };
+}
+
+export function dbAutoRuleToAutoRule(row: DbAutoGenerationRule): AutoGenerationRule {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? undefined,
+    sourceType: row.source_type,
+    minMessageCount: row.min_message_count,
+    minContentLength: row.min_content_length,
+    autoSummarize: row.auto_summarize,
+    autoExtractTags: row.auto_extract_tags,
+    importanceBoost: row.importance_boost,
+    excludePatterns: row.exclude_patterns ?? undefined,
+    requirePatterns: row.require_patterns ?? undefined,
+    enabled: row.enabled,
+    createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime(),
+  };
+}
+
+export function dbQueueItemToQueueItem(row: DbCardGenerationQueue): CardGenerationQueue {
+  return {
+    id: row.id,
+    sourceType: row.source_type,
+    sourceId: row.source_id,
+    sessionId: row.session_id,
+    rawData: row.raw_data,
+    status: row.status,
+    priority: row.priority,
+    cardId: row.card_id ?? undefined,
+    errorMessage: row.error_message ?? undefined,
+    createdAt: new Date(row.created_at).getTime(),
+    processingStartedAt: row.processing_started_at ? new Date(row.processing_started_at).getTime() : undefined,
+    completedAt: row.completed_at ? new Date(row.completed_at).getTime() : undefined,
+    retryCount: row.retry_count,
+    maxRetries: row.max_retries,
+  };
+}

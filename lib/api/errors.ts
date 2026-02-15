@@ -5,7 +5,8 @@ export type ApiErrorCode =
   | 'bad_request'
   | 'timeout'
   | 'config_write_failed'
-  | 'internal_error';
+  | 'internal_error'
+  | 'not_found';
 
 export type ApiErrorBody = {
   code: ApiErrorCode;

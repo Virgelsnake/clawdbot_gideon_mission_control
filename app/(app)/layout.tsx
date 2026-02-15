@@ -1,6 +1,7 @@
 import { AgentProvider } from '@/contexts/agent-context';
 import { Header } from '@/components/layout/header';
 import { MainContent } from '@/components/layout/main-content';
+import { DashboardTabs } from '@/components/layout/dashboard-tabs';
 import { ChatProvider } from '@/contexts/chat-context';
 import { TaskProvider } from '@/contexts/task-context';
 import { ChatPanel } from '@/components/chat/chat-panel';
@@ -10,6 +11,7 @@ import { MobileViewProvider } from '@/contexts/mobile-view-context';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { MobileSettingsWrapper } from '@/components/layout/mobile-settings-wrapper';
 import { UIProvider } from '@/contexts/ui-context';
+import { SecondBrainProvider } from '@/contexts/second-brain-context';
 
 export default function AppLayout({
   children,
@@ -23,16 +25,19 @@ export default function AppLayout({
           <TaskProvider>
             <MobileViewProvider>
               <UIProvider>
-                <div className="flex h-screen flex-col overflow-hidden">
-                  <Header />
-                  <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
-                    <MainContent>{children}</MainContent>
-                    <ChatPanel />
+                <SecondBrainProvider>
+                  <div className="flex h-screen flex-col overflow-hidden">
+                    <Header />
+                    <DashboardTabs />
+                    <div className="flex flex-1 overflow-hidden pb-14 sm:pb-0">
+                      <MainContent>{children}</MainContent>
+                      <ChatPanel />
+                    </div>
+                    <BottomNav />
                   </div>
-                  <BottomNav />
-                </div>
-                <SettingsPanel />
-                <MobileSettingsWrapper />
+                  <SettingsPanel />
+                  <MobileSettingsWrapper />
+                </SecondBrainProvider>
               </UIProvider>
             </MobileViewProvider>
           </TaskProvider>

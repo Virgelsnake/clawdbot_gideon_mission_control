@@ -173,3 +173,216 @@ export interface DbTaskComment {
   content: string;
   created_at: string;
 }
+
+// ============================================
+// Second Brain Types
+// ============================================
+
+export type CardSourceType = 'chat' | 'voice' | 'email' | 'document' | 'web' | 'manual';
+export type CardStatus = 'active' | 'archived' | 'processing';
+export type SegmentRole = 'user' | 'assistant' | 'system';
+export type RelationshipType = 'related' | 'child' | 'parent' | 'reference' | 'duplicate';
+export type QueueStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface ConversationCard {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  sourceType: CardSourceType;
+  sourceId?: string;
+  sourceUrl?: string;
+  sessionId: string;
+  userId: string;
+  importance: number;
+  status: CardStatus;
+  conversationDate: number;
+  createdAt: number;
+  updatedAt: number;
+  archivedAt?: number;
+  tags?: CardTag[]; // Joined from card_tags
+  segments?: ConversationSegment[]; // Joined from conversation_segments
+}
+
+export interface CardTag {
+  id: string;
+  cardId: string;
+  tag: string;
+  confidence: number;
+  extractedBy: 'auto' | 'manual' | 'ai';
+  createdAt: number;
+}
+
+export interface ConversationSegment {
+  id: string;
+  cardId: string;
+  role: SegmentRole;
+  content: string;
+  timestamp: number;
+  sequenceOrder: number;
+  metadata?: Record<string, unknown>;
+  createdAt: number;
+}
+
+export interface TagDefinition {
+  id: string;
+  tag: string;
+  description?: string;
+  color: string;
+  category: string;
+  autoExtractPattern?: string;
+  usageCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface RelatedCard {
+  id: string;
+  sourceCardId: string;
+  targetCardId: string;
+  relationshipType: RelationshipType;
+  confidence: number;
+  createdAt: number;
+  targetCard?: ConversationCard; // Joined
+}
+
+export interface AutoGenerationRule {
+  id: string;
+  name: string;
+  description?: string;
+  sourceType: CardSourceType | 'any';
+  minMessageCount: number;
+  minContentLength: number;
+  autoSummarize: boolean;
+  autoExtractTags: boolean;
+  importanceBoost: number;
+  excludePatterns?: string[];
+  requirePatterns?: string[];
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CardGenerationQueue {
+  id: string;
+  sourceType: CardSourceType;
+  sourceId: string;
+  sessionId: string;
+  rawData: Record<string, unknown>;
+  status: QueueStatus;
+  priority: number;
+  cardId?: string;
+  errorMessage?: string;
+  createdAt: number;
+  processingStartedAt?: number;
+  completedAt?: number;
+  retryCount: number;
+  maxRetries: number;
+}
+
+// Filter types for queries
+export interface CardFilters {
+  search?: string;
+  tags?: string[];
+  sourceType?: CardSourceType;
+  status?: CardStatus;
+  importanceMin?: number;
+  importanceMax?: number;
+  dateFrom?: number;
+  dateTo?: number;
+}
+
+// Supabase DB row types (snake_case)
+export interface DbConversationCard {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  source_type: CardSourceType;
+  source_id: string | null;
+  source_url: string | null;
+  session_id: string;
+  user_id: string;
+  importance: number;
+  status: CardStatus;
+  conversation_date: string;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  search_vector: unknown; // tsvector
+}
+
+export interface DbCardTag {
+  id: string;
+  card_id: string;
+  tag: string;
+  confidence: number;
+  extracted_by: 'auto' | 'manual' | 'ai';
+  created_at: string;
+}
+
+export interface DbConversationSegment {
+  id: string;
+  card_id: string;
+  role: SegmentRole;
+  content: string;
+  timestamp: string;
+  sequence_order: number;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface DbTagDefinition {
+  id: string;
+  tag: string;
+  description: string | null;
+  color: string;
+  category: string;
+  auto_extract_pattern: string | null;
+  usage_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbRelatedCard {
+  id: string;
+  source_card_id: string;
+  target_card_id: string;
+  relationship_type: RelationshipType;
+  confidence: number;
+  created_at: string;
+}
+
+export interface DbAutoGenerationRule {
+  id: string;
+  name: string;
+  description: string | null;
+  source_type: CardSourceType | 'any';
+  min_message_count: number;
+  min_content_length: number;
+  auto_summarize: boolean;
+  auto_extract_tags: boolean;
+  importance_boost: number;
+  exclude_patterns: string[] | null;
+  require_patterns: string[] | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbCardGenerationQueue {
+  id: string;
+  source_type: CardSourceType;
+  source_id: string;
+  session_id: string;
+  raw_data: Record<string, unknown>;
+  status: QueueStatus;
+  priority: number;
+  card_id: string | null;
+  error_message: string | null;
+  created_at: string;
+  processing_started_at: string | null;
+  completed_at: string | null;
+  retry_count: number;
+  max_retries: number;
+}
