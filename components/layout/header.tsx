@@ -1,7 +1,6 @@
 'use client';
 
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Search,
   Bell,
   Plus,
   ChevronDown,
@@ -64,17 +62,6 @@ export function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        </div>
-
-        {/* Center Section - Search */}
-        <div className="hidden md:flex flex-1 max-w-md mx-4">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search tasks, ideas, or team members..."
-              className="w-full pl-9 bg-muted/50 border-0 focus-visible:ring-1"
-            />
           </div>
         </div>
 
