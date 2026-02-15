@@ -16,6 +16,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Password protection temporarily disabled for testing
+  return NextResponse.next();
+
+  /* Original password protection - re-enable after testing
   const sitePassword = process.env.SITE_PASSWORD;
 
   if (!sitePassword) {
@@ -33,6 +37,7 @@ export function middleware(request: NextRequest) {
     loginUrl.searchParams.set('from', pathname);
   }
   return NextResponse.redirect(loginUrl);
+  */
 }
 
 export const config = {
