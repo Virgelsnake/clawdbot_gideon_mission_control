@@ -13,17 +13,31 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Bell,
-  Plus,
   ChevronDown,
   Settings,
   Users,
   LayoutGrid,
   HelpCircle,
+  Brain,
+  Rocket,
 } from 'lucide-react';
 import { useSettings } from '@/contexts/settings-context';
+import { usePathname, useRouter } from 'next/navigation';
+
+const views = [
+  { id: 'mission-control', label: 'Mission Control', icon: Rocket, href: '/' },
+  { id: 'second-brain', label: 'Second Brain', icon: Brain, href: '/second-brain' },
+];
 
 export function Header() {
   const { openSettings } = useSettings();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const currentView = views.find(view =>
+    view.href === '/' ? pathname === '/' : pathname.startsWith(view.href)
+  ) || views[0];
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-12 items-center justify-between px-4 lg:px-6">
@@ -41,24 +55,34 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-1 font-medium">
-                  Mission Control
+                  <currentView.icon className="h-4 w-4 mr-1" />
+                  {currentView.label}
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuItem>
-                  <LayoutGrid className="h-4 w-4 mr-2" />
-                  Mission Control
-                  <Badge variant="secondary" className="ml-auto text-xs">Current</Badge>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
+                {views.map((view) => {
+                  const Icon = view.icon;
+                  const isActive = currentView.id === view.id;
+                  return (
+                    <DropdownMenuItem
+                      key={view.id}
+                      onClick={() => router.push(view.href)}
+                      className="cursor-pointer"
+                    >
+                      <Icon className="h-4 w-4 mr-2" />
+                      {view.label}
+                      {isActive && (
+                        <Badge variant="secondary" className="ml-auto text-xs">Current</Badge>
+                      )}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled>
                   <Users className="h-4 w-4 mr-2" />
                   Team Workspace
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Workspace
+                  <Badge variant="outline" className="ml-auto text-xs">Soon</Badge>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
