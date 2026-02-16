@@ -20,7 +20,7 @@ export function ChatPanel() {
   const { messages, addMessage, appendToLastMessage, setStreaming, persistLastAssistantMessage, clearMessages } = useChat();
   const { currentModel, setStatus } = useAgent();
   const { isMobile, activeTab } = useMobileView();
-  const { isTaskDetailOpen, wasChatPanelOpenBeforeTask, setWasChatPanelOpenBeforeTask } = useUI();
+  const { isTaskDetailOpen, isCardDetailOpen, wasChatPanelOpenBeforeTask, setWasChatPanelOpenBeforeTask } = useUI();
 
   // Handle tablet overlay detection (640px–1024px)
   useEffect(() => {
@@ -33,19 +33,23 @@ export function ChatPanel() {
     return () => window.removeEventListener('resize', checkTablet);
   }, []);
 
-  // Auto-collapse chat when task detail opens, restore when it closes
+  // Auto-collapse chat when any detail panel opens, restore when all close
   useEffect(() => {
     if (isMobile) return; // Don't auto-collapse on mobile
 
-    if (isTaskDetailOpen) {
-      // Task opened: remember current state and collapse chat
-      setWasChatPanelOpenBeforeTask(isOpen);
-      setIsOpen(false);
+    const isAnyDetailOpen = isTaskDetailOpen || isCardDetailOpen;
+
+    if (isAnyDetailOpen) {
+      // Detail opened: remember current state and collapse chat (only if not already collapsed)
+      if (isOpen) {
+        setWasChatPanelOpenBeforeTask(true);
+        setIsOpen(false);
+      }
     } else {
-      // Task closed: restore chat to its previous state
+      // All details closed: restore chat to its previous state
       setIsOpen(wasChatPanelOpenBeforeTask);
     }
-  }, [isTaskDetailOpen, isMobile]); // Run when task detail opens/closes
+  }, [isTaskDetailOpen, isCardDetailOpen, isMobile]); // Run when any detail opens/closes
 
   const handleSendMessage = useCallback(
     async (content: string) => {

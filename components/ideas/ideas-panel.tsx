@@ -10,6 +10,13 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
+function formatDate(timestamp: number): string {
+  // Use fixed format to avoid hydration mismatches
+  const date = new Date(timestamp);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()}`;
+}
+
 function IdeaCard({ idea }: { idea: { id: string; content: string; createdAt: number } }) {
   const { deleteIdea } = useTask();
   const { 
@@ -57,10 +64,7 @@ function IdeaCard({ idea }: { idea: { id: string; content: string; createdAt: nu
           <p className="text-xs leading-relaxed line-clamp-3">{idea.content}</p>
           <div className="flex items-center justify-between mt-2">
             <span className="text-[10px] text-muted-foreground">
-              {new Date(idea.createdAt).toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric',
-              })}
+              {formatDate(idea.createdAt)}
             </span>
             <Button
               variant="ghost"

@@ -42,7 +42,9 @@ const sourceLabels: Record<string, string> = {
 
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${weekdays[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
 export function ConversationDetail({ card, isOpen, onClose }: ConversationDetailProps) {
@@ -52,10 +54,10 @@ export function ConversationDetail({ card, isOpen, onClose }: ConversationDetail
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-lg">
+      <SheetContent className="w-full sm:max-w-xl md:max-w-2xl" showCloseButton={false}>
         <SheetHeader className="space-y-4">
           <div className="flex items-start justify-between">
-            <div className="space-y-1">
+            <div className="space-y-1 pr-8">
               <SheetTitle className="text-left text-lg leading-tight">
                 {card.title}
               </SheetTitle>
@@ -63,7 +65,7 @@ export function ConversationDetail({ card, isOpen, onClose }: ConversationDetail
                 {formatDate(card.conversationDate)}
               </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onClose} className="absolute right-4 top-4">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -96,8 +98,8 @@ export function ConversationDetail({ card, isOpen, onClose }: ConversationDetail
 
         <Separator className="my-4" />
 
-        <ScrollArea className="h-[calc(100vh-280px)]">
-          <div className="space-y-6">
+        <ScrollArea className="flex-1 px-6">
+          <div className="space-y-6 py-2">
             {/* Summary */}
             <div>
               <h4 className="mb-2 text-sm font-medium">Summary</h4>
@@ -127,7 +129,7 @@ export function ConversationDetail({ card, isOpen, onClose }: ConversationDetail
         </ScrollArea>
 
         {/* Actions */}
-        <div className="absolute bottom-0 left-0 right-0 border-t bg-background p-4">
+        <div className="border-t bg-background p-6 pt-4">
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="flex-1 gap-2">
               <Tag className="h-4 w-4" />

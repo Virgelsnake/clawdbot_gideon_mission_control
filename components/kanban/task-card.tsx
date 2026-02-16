@@ -89,7 +89,8 @@ function formatDate(timestamp?: number): string {
   if (diffDays === -1) return 'Yesterday';
   if (diffDays > 0 && diffDays <= 7) return `in ${diffDays} days`;
 
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()}`;
 }
 
 function isOverdue(timestamp?: number): boolean {

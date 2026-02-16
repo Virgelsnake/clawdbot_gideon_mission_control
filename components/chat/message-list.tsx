@@ -23,11 +23,9 @@ function getDateHeader(timestamp: number, prevTimestamp: number | null): string 
   if (dateStr === today) return 'Today';
   if (dateStr === yesterday) return 'Yesterday';
 
-  return date.toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${weekdays[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
 }
 
 export function MessageList() {

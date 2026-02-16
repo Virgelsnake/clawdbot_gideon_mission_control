@@ -319,10 +319,11 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   {task.dueDate ? (
                     <span className="text-xs flex items-center gap-1">
                       <Calendar className="h-3 w-3 text-muted-foreground" />
-                      {new Date(task.dueDate).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                      {(() => {
+                        const date = new Date(task.dueDate);
+                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        return `${months[date.getMonth()]} ${date.getDate()}`;
+                      })()}
                     </span>
                   ) : (
                     <span className="text-xs text-muted-foreground">-</span>
@@ -330,10 +331,11 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                 </td>
                 <td className="py-3 px-2">
                   <span className="text-xs text-muted-foreground">
-                    {new Date(task.createdAt).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {(() => {
+                      const date = new Date(task.createdAt);
+                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                      return `${months[date.getMonth()]} ${date.getDate()}`;
+                    })()}
                   </span>
                 </td>
                 <td className="py-3 px-2">

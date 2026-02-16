@@ -120,10 +120,11 @@ function KanbanContent() {
                 <p className="text-xs leading-relaxed line-clamp-3">{activeIdea.content}</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-[10px] text-muted-foreground">
-                    {new Date(activeIdea.createdAt).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {(() => {
+                      const date = new Date(activeIdea.createdAt);
+                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                      return `${months[date.getMonth()]} ${date.getDate()}`;
+                    })()}
                   </span>
                 </div>
               </div>

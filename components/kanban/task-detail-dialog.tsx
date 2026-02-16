@@ -77,11 +77,9 @@ function getInitials(name: string): string {
 
 function formatDate(timestamp?: number): string {
   if (!timestamp) return '';
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const date = new Date(timestamp);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
 function formatRelativeTime(timestamp: number): string {
@@ -96,10 +94,9 @@ function formatRelativeTime(timestamp: number): string {
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const date = new Date(timestamp);
+  return `${months[date.getMonth()]} ${date.getDate()}`;
 }
 
 export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogProps) {

@@ -8,10 +8,12 @@ import { ConversationDetail } from '@/components/second-brain/conversation-detai
 import { Button } from '@/components/ui/button';
 import { Brain, Plus, Loader2 } from 'lucide-react';
 import { useSecondBrain } from '@/contexts/second-brain-context';
+import { useUI } from '@/contexts/ui-context';
 import { ConversationCard as ConversationSummary } from '@/types';
 
 export default function SecondBrainPage() {
   const { cards, isLoading, refreshCards } = useSecondBrain();
+  const { setCardDetailOpen } = useUI();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     source: 'all',
@@ -20,6 +22,11 @@ export default function SecondBrainPage() {
   });
   const [selectedCard, setSelectedCard] = useState<ConversationSummary | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Sync detail open state with UI context (for chat panel collapse)
+  useEffect(() => {
+    setCardDetailOpen(isDetailOpen);
+  }, [isDetailOpen, setCardDetailOpen]);
 
   useEffect(() => {
     refreshCards();

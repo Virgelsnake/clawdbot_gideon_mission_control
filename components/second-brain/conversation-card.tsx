@@ -36,7 +36,8 @@ const sourceIcons: Record<string, string> = {
 
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
 export function ConversationCard({ card, onClick }: ConversationCardProps) {

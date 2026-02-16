@@ -51,7 +51,8 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
-          disableTransitionOnChange
+          disableTransitionOnChange={true}
+          storageKey="mission-control-theme"
         >
           {children}
           <Toaster />

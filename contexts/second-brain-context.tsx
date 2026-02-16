@@ -62,23 +62,34 @@ export function SecondBrainProvider({ children }: { children: React.ReactNode })
   // Stats
   const [stats, setStats] = useState<{ total: number; active: number; archived: number } | null>(null);
 
-  // Fetch cards
+  // Fetch cards - use ref to avoid circular dependencies
+  const isLoadingRef = React.useRef(isLoading);
+  const filtersRef = React.useRef(filters);
+  const offsetRef = React.useRef(offset);
+  
+  React.useEffect(() => {
+    isLoadingRef.current = isLoading;
+    filtersRef.current = filters;
+    offsetRef.current = offset;
+  }, [isLoading, filters, offset]);
+
   const fetchCards = useCallback(async (reset = false) => {
-    if (isLoading) return;
+    if (isLoadingRef.current) return;
 
     setIsLoading(true);
 
     try {
-      const currentOffset = reset ? 0 : offset;
+      const currentOffset = reset ? 0 : offsetRef.current;
+      const currentFilters = filtersRef.current;
 
       const params = new URLSearchParams();
       params.set('limit', String(PAGE_SIZE));
       params.set('offset', String(currentOffset));
       params.set('withTags', 'true');
 
-      if (filters.status) params.set('status', filters.status);
-      if (filters.search) params.set('q', filters.search);
-      if (filters.sourceType) params.set('sourceType', filters.sourceType);
+      if (currentFilters.status) params.set('status', currentFilters.status);
+      if (currentFilters.search) params.set('q', currentFilters.search);
+      if (currentFilters.sourceType) params.set('sourceType', currentFilters.sourceType);
 
       const response = await fetch(`/api/second-brain/cards?${params}`);
       const data = await response.json();
@@ -100,11 +111,13 @@ export function SecondBrainProvider({ children }: { children: React.ReactNode })
     } finally {
       setIsLoading(false);
     }
-  }, [filters, offset, isLoading]);
+  }, []);
 
-  // Initial fetch
+  // Initial fetch - only when filters.status or filters.sourceType change
   useEffect(() => {
+    setOffset(0);
     fetchCards(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.status, filters.sourceType]);
 
   // Search effect
@@ -137,14 +150,15 @@ export function SecondBrainProvider({ children }: { children: React.ReactNode })
   // Actions
   const refreshCards = useCallback(async () => {
     setOffset(0);
-    await fetchCards(true);
-  }, [fetchCards]);
+    // Use timeout to ensure offset update is applied
+    setTimeout(() => fetchCards(true), 0);
+  }, []);
 
   const loadMore = useCallback(async () => {
-    if (!isLoading && hasMore) {
+    if (!isLoadingRef.current && hasMore) {
       await fetchCards(false);
     }
-  }, [fetchCards, isLoading, hasMore]);
+  }, [hasMore]);
 
   const refreshStats = useCallback(async () => {
     try {
