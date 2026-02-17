@@ -1,6 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase/client';
 import type { ConversationCard, CardFilters, CardTag } from '@/types';
 
 interface SecondBrainContextValue {
@@ -274,6 +276,122 @@ export function SecondBrainProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     refreshStats();
   }, [refreshStats]);
+
+  // ============================================
+  // Supabase Real-time Subscription
+  // ============================================
+  useEffect(() => {
+    // Subscribe to conversation_cards table changes
+    const channel = supabase
+      .channel('second-brain-cards')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'conversation_cards',
+        },
+        (payload) => {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+
+          switch (eventType) {
+            case 'INSERT': {
+              const newCard = newRecord as ConversationCard;
+              
+              // Add new card to state if it matches current filters
+              setCards((prev) => {
+                // Avoid duplicates
+                if (prev.some((c) => c.id === newCard.id)) {
+                  return prev;
+                }
+                // Only add if status matches filter
+                if (filters.status && newCard.status !== filters.status) {
+                  return prev;
+                }
+                // Add to beginning of list (newest first)
+                return [newCard, ...prev];
+              });
+
+              // Update stats
+              setStats((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      total: prev.total + 1,
+                      active:
+                        newCard.status === 'active'
+                          ? prev.active + 1
+                          : prev.active,
+                    }
+                  : null
+              );
+
+              // Show toast notification
+              toast.success('New card saved to Second Brain', {
+                description: `"${newCard.title}"`,
+                action: {
+                  label: 'View',
+                  onClick: () => {
+                    setSelectedCard(newCard);
+                    // Optionally navigate to second-brain page
+                    if (window.location.pathname !== '/second-brain') {
+                      window.location.href = '/second-brain';
+                    }
+                  },
+                },
+              });
+              break;
+            }
+
+            case 'UPDATE': {
+              const updatedCard = newRecord as ConversationCard;
+              const oldCard = oldRecord as ConversationCard;
+
+              setCards((prev) =>
+                prev.map((c) => (c.id === updatedCard.id ? { ...c, ...updatedCard } : c))
+              );
+
+              // Update selected card if it's the one being modified
+              if (selectedCard?.id === updatedCard.id) {
+                setSelectedCard((prev) => (prev ? { ...prev, ...updatedCard } : null));
+              }
+
+              // Handle status changes for stats
+              if (oldCard.status !== updatedCard.status) {
+                refreshStats();
+              }
+              break;
+            }
+
+            case 'DELETE': {
+              const deletedCard = oldRecord as ConversationCard;
+
+              setCards((prev) => prev.filter((c) => c.id !== deletedCard.id));
+
+              if (selectedCard?.id === deletedCard.id) {
+                setSelectedCard(null);
+              }
+
+              refreshStats();
+              break;
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Second Brain: Subscribed to real-time updates');
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Second Brain: Real-time subscription error');
+        }
+      });
+
+    // Cleanup subscription on unmount
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [filters.status, selectedCard?.id, refreshStats]);
 
   const value: SecondBrainContextValue = {
     cards,
