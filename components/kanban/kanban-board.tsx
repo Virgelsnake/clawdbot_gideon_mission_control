@@ -23,6 +23,8 @@ import { TaskList } from './task-list';
 import { TaskDetailDialog } from './task-detail-dialog';
 import { useState, useEffect, useCallback } from 'react';
 import { useUI } from '@/contexts/ui-context';
+import { hasTaskContextDoc } from '@/lib/task-context-doc-client';
+import { getTaskWorkflowMeta } from '@/lib/task-workflow-meta';
 
 type ViewMode = 'board' | 'list';
 
@@ -50,6 +52,9 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
   const [mobileColumn, setMobileColumn] = useState<ColumnType>('todo');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [missingDocCount, setMissingDocCount] = useState(0);
+  const [blockedCount, setBlockedCount] = useState(0);
+  const [staleCount, setStaleCount] = useState(0);
   const { setTaskDetailOpen } = useUI();
 
   // Sync task detail state with UI context
@@ -66,6 +71,36 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function computeWidgets() {
+      const inProgress = tasks.filter((t) => t.column === 'in-progress');
+      const now = Date.now();
+      const stale = inProgress.filter((t) => now - t.updatedAt > 24 * 60 * 60 * 1000).length;
+      const blocked = inProgress.filter((t) => {
+        const meta = getTaskWorkflowMeta(t.id);
+        return Boolean(meta.blockedReason && meta.blockedReason.trim());
+      }).length;
+
+      let missing = 0;
+      for (const task of inProgress) {
+        // eslint-disable-next-line no-await-in-loop
+        const hasDoc = await hasTaskContextDoc(task.id);
+        if (!hasDoc) missing += 1;
+      }
+
+      if (!active) return;
+      setStaleCount(stale);
+      setBlockedCount(blocked);
+      setMissingDocCount(missing);
+    }
+
+    computeWidgets();
+    return () => {
+      active = false;
+    };
+  }, [tasks]);
 
   const totalTasks = tasks.length;
   const filteredCount = filteredTasks.length;
@@ -264,6 +299,13 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
 
           {/* Active Filters */}
           <ActiveFilters />
+
+          {/* Workflow Visibility Widgets */}
+          <div className="flex items-center gap-2 text-xs">
+            <Badge variant={missingDocCount > 0 ? 'destructive' : 'secondary'}>Missing docs: {missingDocCount}</Badge>
+            <Badge variant={blockedCount > 0 ? 'destructive' : 'secondary'}>Blocked: {blockedCount}</Badge>
+            <Badge variant={staleCount > 0 ? 'destructive' : 'secondary'}>Stale &gt;24h: {staleCount}</Badge>
+          </div>
         </div>
       </div>
 

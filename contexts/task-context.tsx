@@ -18,19 +18,22 @@ import {
   deleteIdea as sbDeleteIdea,
 } from '@/lib/supabase/ideas';
 import { migrateLocalStorageToSupabase } from '@/lib/supabase/migrate-localstorage';
+import { hasTaskContextDoc } from '@/lib/task-context-doc-client';
+import { getTaskWorkflowMeta } from '@/lib/task-workflow-meta';
+import { toast } from 'sonner';
 
 interface TaskContextValue {
   tasks: Task[];
   filteredTasks: Task[];
   ideas: Idea[];
   loading: boolean;
-  addTask: (title: string, description?: string, column?: KanbanColumn, priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => void;
-  updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => void;
-  deleteTask: (id: string) => void;
-  moveTask: (id: string, toColumn: KanbanColumn) => void;
+  addTask: (title: string, description?: string, column?: KanbanColumn, priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => Promise<Task>;
+  updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
+  moveTask: (id: string, toColumn: KanbanColumn) => Promise<void>;
   addIdea: (content: string) => void;
   deleteIdea: (id: string) => void;
-  archiveIdea: (id: string, taskId: string) => void;
+  archiveIdea: (id: string, taskId: string) => Promise<void>;
   promoteIdea: (id: string) => void;
   filters: TaskFilters;
   setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void;
@@ -218,28 +221,65 @@ export function TaskProvider({ children }: TaskProviderProps) {
     });
   }, []);
 
-  const addTask = useCallback((title: string, description?: string, column: KanbanColumn = 'backlog', priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => {
-    sbCreateTask({ title, description, column, priority, assignee, dueDate, labels }).catch(
-      (err) => console.error('Failed to create task:', err)
-    );
+  const addTask = useCallback(async (title: string, description?: string, column: KanbanColumn = 'backlog', priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => {
+    try {
+      return await sbCreateTask({ title, description, column, priority, assignee, dueDate, labels });
+    } catch (err) {
+      console.error('Failed to create task:', err);
+      throw err;
+    }
   }, []);
 
-  const updateTask = useCallback((id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => {
-    sbUpdateTask(id, updates).catch(
-      (err) => console.error('Failed to update task:', err)
-    );
+  const updateTask = useCallback(async (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => {
+    try {
+      if (updates.column === 'in-progress') {
+        const hasDoc = await hasTaskContextDoc(id);
+        if (!hasDoc) {
+          toast.error('Cannot move to In Progress without task execution doc.');
+          return;
+        }
+      }
+      if (updates.column === 'review') {
+        const meta = getTaskWorkflowMeta(id);
+        if (!meta.evidenceLinks || meta.evidenceLinks.length === 0) {
+          toast.error('Cannot move to Review without at least one evidence link.');
+          return;
+        }
+      }
+      await sbUpdateTask(id, updates);
+    } catch (err) {
+      console.error('Failed to update task:', err);
+    }
   }, []);
 
-  const deleteTask = useCallback((id: string) => {
-    sbDeleteTask(id).catch(
-      (err) => console.error('Failed to delete task:', err)
-    );
+  const deleteTask = useCallback(async (id: string) => {
+    try {
+      await sbDeleteTask(id);
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+    }
   }, []);
 
-  const moveTask = useCallback((id: string, toColumn: KanbanColumn) => {
-    sbUpdateTask(id, { column: toColumn }).catch(
-      (err) => console.error('Failed to move task:', err)
-    );
+  const moveTask = useCallback(async (id: string, toColumn: KanbanColumn) => {
+    try {
+      if (toColumn === 'in-progress') {
+        const hasDoc = await hasTaskContextDoc(id);
+        if (!hasDoc) {
+          toast.error('Cannot move to In Progress without task execution doc.');
+          return;
+        }
+      }
+      if (toColumn === 'review') {
+        const meta = getTaskWorkflowMeta(id);
+        if (!meta.evidenceLinks || meta.evidenceLinks.length === 0) {
+          toast.error('Cannot move to Review without at least one evidence link.');
+          return;
+        }
+      }
+      await sbUpdateTask(id, { column: toColumn });
+    } catch (err) {
+      console.error('Failed to move task:', err);
+    }
   }, []);
 
   const addIdea = useCallback((content: string) => {
@@ -254,12 +294,17 @@ export function TaskProvider({ children }: TaskProviderProps) {
     );
   }, []);
 
-  const archiveIdea = useCallback((id: string, taskId: string) => {
-    sbUpdateIdea(id, {
-      archived: true,
-      convertedToTaskId: taskId,
-      archivedAt: Date.now(),
-    }).catch((err) => console.error('Failed to archive idea:', err));
+  const archiveIdea = useCallback(async (id: string, taskId: string) => {
+    try {
+      await sbUpdateIdea(id, {
+        archived: true,
+        convertedToTaskId: taskId,
+        archivedAt: Date.now(),
+      });
+    } catch (err) {
+      console.error('Failed to archive idea:', err);
+      throw err;
+    }
   }, []);
 
   const promoteIdea = useCallback((id: string) => {

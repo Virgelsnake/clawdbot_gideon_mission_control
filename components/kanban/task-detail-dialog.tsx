@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSettings } from '@/contexts/settings-context';
+import { useState, useEffect } from 'react';
 import type { Task, TaskComment, TaskPriority } from '@/types';
 import {
   Sheet,
@@ -13,21 +12,20 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   Calendar,
   Flag,
   AlertCircle,
-  MessageSquare,
-  Send,
   User,
+  FileText,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
-import {
-  fetchComments,
-  createComment,
-  subscribeTaskComments,
-} from '@/lib/supabase/task-comments';
+import { Input } from '@/components/ui/input';
+import { createTaskContextDoc, getTaskContextDoc } from '@/lib/task-context-doc-client';
+import { getTaskWorkflowMeta, setTaskWorkflowMeta } from '@/lib/task-workflow-meta';
+import { toast } from 'sonner';
 
 interface TaskDetailDialogProps {
   task: Task | null;
@@ -100,72 +98,110 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogProps) {
-  const { settings } = useSettings();
-  const [comments, setComments] = useState<TaskComment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const commentsEndRef = useRef<HTMLDivElement>(null);
+  const [docExists, setDocExists] = useState(false);
+  const [docPath, setDocPath] = useState('');
+  const [loadingDoc, setLoadingDoc] = useState(false);
+  const [savingDoc, setSavingDoc] = useState(false);
+  const [contextForm, setContextForm] = useState({
+    objective: '',
+    briefPath: '',
+    prdPath: '',
+    taskListPath: '',
+    definitionOfDone: '',
+    currentState: '',
+    nextActions: '',
+  });
+  const [workflowMeta, setWorkflowMeta] = useState({
+    blockedReason: '',
+    nextCheckAt: '',
+    evidenceLinks: '',
+    notes: '',
+  });
 
-  const scrollToBottom = useCallback(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  // Load comments when task changes
   useEffect(() => {
-    if (!task || !open) {
-      setComments([]);
+    if (!task || !open) return;
+    setLoadingDoc(true);
+    getTaskContextDoc(task.id)
+      .then((res) => {
+        setDocExists(res.exists);
+        setDocPath(res.path);
+      })
+      .finally(() => setLoadingDoc(false));
+
+    setContextForm((prev) => ({
+      ...prev,
+      objective: prev.objective || task.title,
+      currentState: prev.currentState || (task.description || ''),
+      nextActions: prev.nextActions || '- [ ] Define next implementation step',
+      definitionOfDone: prev.definitionOfDone || '- [ ] Acceptance criteria met',
+    }));
+
+    const meta = getTaskWorkflowMeta(task.id);
+    setWorkflowMeta({
+      blockedReason: meta.blockedReason || '',
+      nextCheckAt: meta.nextCheckAt ? new Date(meta.nextCheckAt).toISOString().slice(0, 16) : '',
+      evidenceLinks: (meta.evidenceLinks || []).join('\n'),
+      notes: meta.notes || '',
+    });
+  }, [task?.id, open]);
+
+  const saveContextDoc = async () => {
+    if (!task) return;
+    const required = [
+      contextForm.objective,
+      contextForm.briefPath,
+      contextForm.prdPath,
+      contextForm.taskListPath,
+      contextForm.definitionOfDone,
+      contextForm.currentState,
+      contextForm.nextActions,
+    ];
+    if (required.some((v) => !v.trim())) {
+      toast.error('Fill all execution context fields before saving.');
       return;
     }
 
-    setLoadingComments(true);
-    fetchComments(task.id)
-      .then((data) => {
-        setComments(data);
-        setTimeout(scrollToBottom, 100);
-      })
-      .finally(() => setLoadingComments(false));
-  }, [task?.id, open, scrollToBottom]);
-
-  // Realtime subscription for new comments
-  useEffect(() => {
-    if (!task || !open) return;
-
-    const unsubscribe = subscribeTaskComments(task.id, (newComment) => {
-      setComments((prev) => {
-        if (prev.some((c) => c.id === newComment.id)) return prev;
-        return [...prev, newComment];
+    setSavingDoc(true);
+    try {
+      const res = await createTaskContextDoc({
+        taskId: task.id,
+        title: task.title,
+        objective: contextForm.objective.trim(),
+        briefPath: contextForm.briefPath.trim(),
+        prdPath: contextForm.prdPath.trim(),
+        taskListPath: contextForm.taskListPath.trim(),
+        definitionOfDone: contextForm.definitionOfDone.trim(),
+        currentState: contextForm.currentState.trim(),
+        nextActions: contextForm.nextActions.trim(),
+        assignee: task.assignee,
+        priority: task.priority,
       });
-      setTimeout(scrollToBottom, 100);
+      setDocExists(true);
+      setDocPath(res.path);
+      toast.success('Task context doc saved');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save context doc');
+    } finally {
+      setSavingDoc(false);
+    }
+  };
+
+  const saveWorkflowMeta = () => {
+    if (!task) return;
+    const evidenceLinks = workflowMeta.evidenceLinks
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    setTaskWorkflowMeta(task.id, {
+      blockedReason: workflowMeta.blockedReason.trim() || undefined,
+      nextCheckAt: workflowMeta.nextCheckAt ? new Date(workflowMeta.nextCheckAt).getTime() : undefined,
+      evidenceLinks,
+      notes: workflowMeta.notes.trim() || undefined,
     });
-
-    return unsubscribe;
-  }, [task?.id, open, scrollToBottom]);
-
-  const handleSubmitComment = async () => {
-    if (!task || !newComment.trim() || submitting) return;
-
-    setSubmitting(true);
-    const author = settings.chat.displayName === 'You' ? 'steve' : settings.chat.displayName.toLowerCase();
-    const result = await createComment(task.id, author, newComment.trim());
-    if (result) {
-      // Optimistic: the realtime subscription will also add it, but we add immediately
-      setComments((prev) => {
-        if (prev.some((c) => c.id === result.id)) return prev;
-        return [...prev, result];
-      });
-      setNewComment('');
-      setTimeout(scrollToBottom, 100);
-    }
-    setSubmitting(false);
+    toast.success('Workflow metadata saved');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmitComment();
-    }
-  };
 
   if (!task) return null;
 
@@ -174,7 +210,7 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" showOverlay={false} className="w-full sm:max-w-lg flex flex-col overflow-hidden">
+      <SheetContent side="right" showOverlay={false} className="w-full sm:max-w-lg flex flex-col overflow-y-auto overscroll-contain">
         <SheetHeader className="flex-shrink-0">
           <SheetTitle className="text-lg leading-tight pr-6">{task.title}</SheetTitle>
           <SheetDescription className="sr-only">Task details and comments</SheetDescription>
@@ -227,6 +263,71 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
             )}
           </div>
 
+          <div className="rounded-md border bg-muted/30 px-2.5 py-2">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-1">Task ID</div>
+            <code className="block text-xs font-mono text-foreground break-all select-all">{task.id}</code>
+          </div>
+
+          <div className="rounded-md border p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <FileText className="h-4 w-4" />
+                Execution Context
+              </div>
+              <Badge variant={docExists ? 'default' : 'destructive'}>{loadingDoc ? 'Checking...' : docExists ? 'Ready' : 'Missing'}</Badge>
+            </div>
+
+            {docPath && <p className="text-[11px] text-muted-foreground break-all">{docPath}</p>}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Input placeholder="Brief path" value={contextForm.briefPath} onChange={(e) => setContextForm((p) => ({ ...p, briefPath: e.target.value }))} />
+              <Input placeholder="PRD path" value={contextForm.prdPath} onChange={(e) => setContextForm((p) => ({ ...p, prdPath: e.target.value }))} />
+              <Input placeholder="Task list path" value={contextForm.taskListPath} onChange={(e) => setContextForm((p) => ({ ...p, taskListPath: e.target.value }))} className="sm:col-span-2" />
+            </div>
+
+            <Textarea placeholder="Objective" rows={2} value={contextForm.objective} onChange={(e) => setContextForm((p) => ({ ...p, objective: e.target.value }))} />
+            <Textarea placeholder="Definition of done" rows={2} value={contextForm.definitionOfDone} onChange={(e) => setContextForm((p) => ({ ...p, definitionOfDone: e.target.value }))} />
+            <Textarea placeholder="Current state" rows={2} value={contextForm.currentState} onChange={(e) => setContextForm((p) => ({ ...p, currentState: e.target.value }))} />
+            <Textarea placeholder="Next actions" rows={2} value={contextForm.nextActions} onChange={(e) => setContextForm((p) => ({ ...p, nextActions: e.target.value }))} />
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" onClick={saveContextDoc} disabled={savingDoc}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1" /> {savingDoc ? 'Saving...' : docExists ? 'Regenerate Doc' : 'Create Doc'}
+              </Button>
+              {docExists && (
+                <Button type="button" size="sm" variant="outline" onClick={() => window.open(`/api/task-context-doc?taskId=${encodeURIComponent(task.id)}&raw=1`, '_blank')}>
+                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Doc
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-md border p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Workflow Metadata</div>
+              <Badge variant="secondary">Local</Badge>
+            </div>
+
+            <Textarea
+              placeholder="Blocked reason (optional)"
+              rows={2}
+              value={workflowMeta.blockedReason}
+              onChange={(e) => setWorkflowMeta((p) => ({ ...p, blockedReason: e.target.value }))}
+            />
+            <Input
+              type="datetime-local"
+              value={workflowMeta.nextCheckAt}
+              onChange={(e) => setWorkflowMeta((p) => ({ ...p, nextCheckAt: e.target.value }))}
+            />
+            <Textarea
+              placeholder="Evidence links (one per line)"
+              rows={3}
+              value={workflowMeta.evidenceLinks}
+              onChange={(e) => setWorkflowMeta((p) => ({ ...p, evidenceLinks: e.target.value }))}
+            />
+            <Button type="button" size="sm" variant="outline" onClick={saveWorkflowMeta}>Save Workflow Metadata</Button>
+          </div>
+
           {/* Description */}
           {task.description && (
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -237,65 +338,18 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
 
         <Separator className="flex-shrink-0" />
 
-        {/* Comments Section */}
-        <div className="flex-1 flex flex-col min-h-0 px-4">
-          <div className="flex items-center gap-2 mb-3 flex-shrink-0">
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium">
-              Comments {comments.length > 0 && `(${comments.length})`}
-            </h3>
-          </div>
-
-          {/* Comments list */}
-          <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-1">
-            {loadingComments && (
-              <p className="text-xs text-muted-foreground text-center py-4">Loading comments...</p>
-            )}
-            {!loadingComments && comments.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">No comments yet. Be the first to add one.</p>
-            )}
-            {comments.map((comment) => (
-              <div key={comment.id} className="flex gap-2.5">
-                <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5">
-                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
-                    {getInitials(comment.author)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-medium capitalize">{comment.author}</span>
-                    <span className="text-[10px] text-muted-foreground">{formatRelativeTime(comment.createdAt)}</span>
-                  </div>
-                  <p className="text-sm text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">
-                    {comment.content}
-                  </p>
-                </div>
-              </div>
-            ))}
-            <div ref={commentsEndRef} />
-          </div>
-
-          {/* Comment input */}
-          <div className="flex-shrink-0 pt-3 pb-2">
-            <div className="flex gap-2">
-              <Textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Add a comment..."
-                className="min-h-[40px] max-h-[120px] text-sm resize-none"
-                disabled={submitting}
-              />
-              <Button
-                size="icon"
-                onClick={handleSubmitComment}
-                disabled={!newComment.trim() || submitting}
-                className="flex-shrink-0 h-10 w-10"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1">Press Enter to send, Shift+Enter for new line</p>
+        {/* Notes Section */}
+        <Separator className="flex-shrink-0" />
+        <div className="px-4 py-3">
+          <h3 className="text-sm font-medium mb-2">Notes</h3>
+          <Textarea
+            placeholder="Working notes for this task"
+            rows={8}
+            value={workflowMeta.notes}
+            onChange={(e) => setWorkflowMeta((p) => ({ ...p, notes: e.target.value }))}
+          />
+          <div className="mt-2">
+            <Button type="button" size="sm" variant="outline" onClick={saveWorkflowMeta}>Save Notes</Button>
           </div>
         </div>
       </SheetContent>
