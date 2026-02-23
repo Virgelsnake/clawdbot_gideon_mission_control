@@ -1,52 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mission Control
 
-## Getting Started
+Mission Control is the operational dashboard for managing AI-assisted delivery work.
 
-### Environment
+## What it does
+- Kanban-style project board (backlog → done)
+- Ideas capture and conversion into projects
+- Project execution context (Brief, PRD, Task List)
+- Review gating with evidence requirements
+- Workflow visibility widgets (missing docs, blocked, stale)
+- Calendar and reminder views
+- API routes for agent pickup/assign/complete flows
 
-This app connects to the local Clawdbot Gateway via **server-side** API routes (proxy), so the browser never sees the Gateway token.
+## Stack
+- Next.js 16 (App Router)
+- TypeScript
+- Supabase (tasks, ideas, comments, reminders)
+- Tailwind + Radix UI
 
-1) Copy env template:
-
+## Local setup
 ```bash
+cd projects/mission-control
 cp .env.example .env.local
-```
-
-2) Edit `.env.local` and set:
-- `CLAWDBOT_GATEWAY_URL` (default `http://127.0.0.1:18789`)
-- `CLAWDBOT_GATEWAY_TOKEN` (required)
-
-### Run
-
-First, run the development server:
-
-```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3011` (or the port shown in terminal).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Quality commands
+```bash
+npm run lint
+npm run test
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project documentation
+Start at:
+- `docs/INDEX.md`
 
-## Learn More
+Execution context for active projects:
+- `docs/task-context/<project-id>.md`
 
-To learn more about Next.js, take a look at the following resources:
+## Delivery workflow
+1. Create Project card
+2. Link/create Brief + PRD + Task List
+3. Move to In Progress only with context doc
+4. Complete work with evidence
+5. Move to Review then Done
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+- Netlify deploy target
+- Recommended flow: feature branch -> PR -> approval -> merge -> deploy
