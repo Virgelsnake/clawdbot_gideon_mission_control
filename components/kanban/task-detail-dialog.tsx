@@ -145,6 +145,15 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
     });
   }, [task?.id, open]);
 
+  const openLocalDoc = (filePath: string) => {
+    const p = filePath.trim();
+    if (!p) {
+      toast.error('Document path is empty');
+      return;
+    }
+    window.open(`/api/local-doc?path=${encodeURIComponent(p)}`, '_blank');
+  };
+
   const saveContextDoc = async () => {
     if (!task) return;
     const required = [
@@ -296,9 +305,18 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
               </Button>
               {docExists && (
                 <Button type="button" size="sm" variant="outline" onClick={() => window.open(`/api/task-context-doc?taskId=${encodeURIComponent(task.id)}&raw=1`, '_blank')}>
-                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Doc
+                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Context Doc
                 </Button>
               )}
+              <Button type="button" size="sm" variant="outline" onClick={() => openLocalDoc(contextForm.briefPath)} disabled={!contextForm.briefPath.trim()}>
+                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Brief
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => openLocalDoc(contextForm.prdPath)} disabled={!contextForm.prdPath.trim()}>
+                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open PRD
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => openLocalDoc(contextForm.taskListPath)} disabled={!contextForm.taskListPath.trim()}>
+                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Task List
+              </Button>
             </div>
           </div>
 
