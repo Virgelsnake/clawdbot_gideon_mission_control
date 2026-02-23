@@ -78,7 +78,7 @@ export function FilterDropdown() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel className="font-semibold">Filter Tasks</DropdownMenuLabel>
+        <DropdownMenuLabel className="font-semibold">Filter Projects</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
         {/* Search */}

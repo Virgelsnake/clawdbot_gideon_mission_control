@@ -264,7 +264,7 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
           </div>
 
           <div className="rounded-md border bg-muted/30 px-2.5 py-2">
-            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-1">Task ID</div>
+            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-1">Project ID</div>
             <code className="block text-xs font-mono text-foreground break-all select-all">{task.id}</code>
           </div>
 
@@ -343,7 +343,7 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
         <div className="px-4 py-3">
           <h3 className="text-sm font-medium mb-2">Notes</h3>
           <Textarea
-            placeholder="Working notes for this task"
+            placeholder="Working notes for this project"
             rows={8}
             value={workflowMeta.notes}
             onChange={(e) => setWorkflowMeta((p) => ({ ...p, notes: e.target.value }))}

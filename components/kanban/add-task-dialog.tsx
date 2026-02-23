@@ -96,13 +96,13 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
 
     const requiredDocFields = [objective, briefPath, prdPath, taskListPath, definitionOfDone, currentState, nextActions];
     if (requiredDocFields.some((f) => !f.trim())) {
-      toast.error('Execution docs are required before task creation.');
+      toast.error('Execution docs are required before project creation.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const task = await addTask(
+      const project = await addTask(
         title.trim(),
         description.trim() || undefined,
         column,
@@ -113,8 +113,8 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
       );
 
       await createTaskContextDoc({
-        taskId: task.id,
-        title: task.title,
+        taskId: project.id,
+        title: project.title,
         objective: objective.trim(),
         briefPath: briefPath.trim(),
         prdPath: prdPath.trim(),
@@ -128,9 +128,9 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
 
       resetForm();
       setOpen(false);
-      toast.success(`Task created with execution doc (${task.id})`);
+      toast.success(`Project created with execution doc (${project.id})`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create task');
+      toast.error(err instanceof Error ? err.message : 'Failed to create project');
     } finally {
       setSubmitting(false);
     }
@@ -150,20 +150,20 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
         ) : (
           <Button variant="default" size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            Add Task
+            Add Project
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Create New Task</DialogTitle>
-            <DialogDescription>Add a new task to your board. Execution docs are required.</DialogDescription>
+            <DialogTitle>Create New Project</DialogTitle>
+            <DialogDescription>Add a new project to your board. Execution docs are required.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-5 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title" className="text-sm font-medium">Task Title <span className="text-destructive">*</span></Label>
+              <Label htmlFor="title" className="text-sm font-medium">Project Title <span className="text-destructive">*</span></Label>
               <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs to be done?" required className="h-10" />
             </div>
 
@@ -247,7 +247,7 @@ export function AddTaskDialog({ defaultColumn = 'backlog', variant = 'header' }:
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={!title.trim() || submitting}>{submitting ? 'Creating...' : 'Create Task'}</Button>
+            <Button type="submit" disabled={!title.trim() || submitting}>{submitting ? 'Creating...' : 'Create Project'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

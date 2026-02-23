@@ -139,7 +139,7 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
         className={`rounded-lg border border-border/60 bg-card p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] cursor-grab active:cursor-grabbing group transition-all duration-200 ease-out hover:shadow-md hover:border-border hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
           isDragging ? 'opacity-50 rotate-[3deg] scale-105 shadow-xl ring-2 ring-primary/30 border-primary/40' : ''
         }`}
-        aria-label={`Task: ${task.title}`}
+        aria-label={`Project: ${task.title}`}
         tabIndex={0}
       >
         {/* Labels Row */}
@@ -230,7 +230,7 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
             <DialogDescription>
-              Update the task title.
+              Update the project title.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

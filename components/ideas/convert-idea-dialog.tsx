@@ -138,9 +138,9 @@ export function ConvertIdeaDialog({
       setNextActions('');
       onOpenChange(false);
 
-      toast.success('Idea converted to task!', { icon: '🚀' });
+      toast.success('Idea converted to project!', { icon: '🚀' });
     } catch {
-      toast.error('Failed to convert idea to task');
+      toast.error('Failed to convert idea to project');
     } finally {
       setSubmitting(false);
     }
@@ -163,13 +163,13 @@ export function ConvertIdeaDialog({
               Convert to Task
             </DialogTitle>
             <DialogDescription>
-              Add details to convert this idea into a task. Execution docs are required.
+              Add details to convert this idea into a project. Execution docs are required.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-5 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title" className="text-sm font-medium">Task Title <span className="text-destructive">*</span></Label>
+              <Label htmlFor="title" className="text-sm font-medium">Project Title <span className="text-destructive">*</span></Label>
               <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs to be done?" required className="h-10" />
             </div>
 
@@ -243,7 +243,7 @@ export function ConvertIdeaDialog({
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={!title.trim() || submitting}>{submitting ? 'Creating...' : 'Create Task'}</Button>
+            <Button type="submit" disabled={!title.trim() || submitting}>{submitting ? 'Creating...' : 'Create Project'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

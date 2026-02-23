@@ -94,7 +94,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   };
 
   const handleDelete = (taskId: string) => {
-    if (confirm('Are you sure you want to delete this task?')) {
+    if (confirm('Are you sure you want to delete this project?')) {
       deleteTask(taskId);
     }
   };
@@ -109,9 +109,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
           <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
         </div>
-        <p className="text-sm font-medium text-foreground mb-1">No tasks found</p>
+        <p className="text-sm font-medium text-foreground mb-1">No projects found</p>
         <p className="text-xs text-muted-foreground max-w-[240px] text-center">
-          Try adjusting your filters or create a new task to get started
+          Try adjusting your filters or create a new project to get started
         </p>
       </div>
     );

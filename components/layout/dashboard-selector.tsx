@@ -23,7 +23,7 @@ const dashboards: DashboardOption[] = [
   {
     id: 'mission-control',
     name: 'Mission Control',
-    description: 'Kanban board & task management',
+    description: 'Kanban board & project management',
     href: '/',
     icon: Layout,
   },

@@ -57,7 +57,7 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
   const [staleCount, setStaleCount] = useState(0);
   const { setTaskDetailOpen } = useUI();
 
-  // Sync task detail state with UI context
+  // Sync project detail state with UI context
   useEffect(() => {
     setTaskDetailOpen(detailOpen);
   }, [detailOpen, setTaskDetailOpen]);
@@ -140,7 +140,7 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search tasks..."
+              placeholder="Search projects..."
               value={filters.search}
               onChange={(e) => setFilter('search', e.target.value)}
               className="h-8 w-full pl-9 pr-8 text-sm"
@@ -195,8 +195,8 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
             </div>
           ) : mobileColumnTasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-center">
-              <p className="text-sm text-muted-foreground">No tasks in {activeCol?.title}</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">Add a task to get started</p>
+              <p className="text-sm text-muted-foreground">No projects in {activeCol?.title}</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Add a project to get started</p>
             </div>
           ) : (
             mobileColumnTasks.map((task) => (
@@ -218,10 +218,10 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
             <Badge variant="secondary" className="font-normal">
               {mounted ? (
                 <>
-                  {filteredCount} {filteredCount !== totalTasks && `/ ${totalTasks}`} tasks
+                  {filteredCount} {filteredCount !== totalTasks && `/ ${totalTasks}`} projects
                 </>
               ) : (
-                '0 tasks'
+                '0 projects'
               )}
             </Badge>
           </div>
@@ -230,7 +230,7 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search tasks..."
+                placeholder="Search projects..."
                 value={filters.search}
                 onChange={(e) => setFilter('search', e.target.value)}
                 className="h-8 w-64 pl-9 pr-8 text-sm"
