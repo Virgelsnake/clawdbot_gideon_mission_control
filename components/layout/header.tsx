@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Brain,
   Rocket,
+  Calendar,
 } from 'lucide-react';
 import { useSettings } from '@/contexts/settings-context';
 import { usePathname, useRouter } from 'next/navigation';
@@ -27,6 +28,7 @@ import { useEffect, useState } from 'react';
 
 const views = [
   { id: 'mission-control', label: 'Mission Control', icon: Rocket, href: '/' },
+  { id: 'calendar', label: 'Calendar', icon: Calendar, href: '/calendar' },
   { id: 'second-brain', label: 'Second Brain', icon: Brain, href: '/second-brain' },
 ];
 
