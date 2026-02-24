@@ -27,11 +27,17 @@ export interface ChatSettings {
   displayName: string;
 }
 
+export interface FeatureFlags {
+  calendarV2Enabled: boolean;
+  calendarAutoReprioritiseEnabled: boolean;
+}
+
 export interface AppSettings {
   labels: LabelConfig[];
   teamMembers: TeamMember[];
   board: BoardDefaults;
   chat: ChatSettings;
+  features: FeatureFlags;
 }
 
 // --- Defaults ---
@@ -59,11 +65,17 @@ const DEFAULT_CHAT: ChatSettings = {
   displayName: 'You',
 };
 
+const DEFAULT_FEATURES: FeatureFlags = {
+  calendarV2Enabled: true,
+  calendarAutoReprioritiseEnabled: true,
+};
+
 const DEFAULT_SETTINGS: AppSettings = {
   labels: DEFAULT_LABELS,
   teamMembers: DEFAULT_TEAM_MEMBERS,
   board: DEFAULT_BOARD,
   chat: DEFAULT_CHAT,
+  features: DEFAULT_FEATURES,
 };
 
 const STORAGE_KEY = 'mission-control-settings';
@@ -87,6 +99,8 @@ interface SettingsContextValue {
   updateBoardDefaults: (updates: Partial<BoardDefaults>) => void;
   // Chat
   updateChatSettings: (updates: Partial<ChatSettings>) => void;
+  // Features
+  updateFeatureFlags: (updates: Partial<FeatureFlags>) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
@@ -102,6 +116,7 @@ function loadSettings(): AppSettings {
         teamMembers: parsed.teamMembers ?? DEFAULT_SETTINGS.teamMembers,
         board: { ...DEFAULT_SETTINGS.board, ...parsed.board },
         chat: { ...DEFAULT_SETTINGS.chat, ...parsed.chat },
+        features: { ...DEFAULT_SETTINGS.features, ...parsed.features },
       };
     }
   } catch {
@@ -203,6 +218,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // --- Features ---
+  const updateFeatureFlags = useCallback((updates: Partial<FeatureFlags>) => {
+    setSettings(prev => {
+      const next = { ...prev, features: { ...prev.features, ...updates } };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
   // Use defaults until mounted to avoid hydration mismatch
   const value: SettingsContextValue = {
     settings: mounted ? settings : DEFAULT_SETTINGS,
@@ -217,6 +241,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     deleteTeamMember,
     updateBoardDefaults,
     updateChatSettings,
+    updateFeatureFlags,
   };
 
   return (

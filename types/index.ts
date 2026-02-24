@@ -131,7 +131,8 @@ export type ActivityLogAction =
   | 'idea_deleted'
   | 'model_switched'
   | 'config_updated'
-  | 'comment_added';
+  | 'comment_added'
+  | 'priority_changed';
 
 export type ActivityLogEntityType = 'task' | 'idea' | 'agent_state';
 

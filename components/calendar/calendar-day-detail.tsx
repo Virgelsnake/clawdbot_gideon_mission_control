@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import type { CalendarProject } from '@/types/calendar';
 import { getThresholdBadge } from '@/types/calendar';
 import { TaskDetailDialog } from '@/components/kanban/task-detail-dialog';
 import { useTask } from '@/contexts/task-context';
-import { Calendar, MoreHorizontal, CalendarDays } from 'lucide-react';
+import { Calendar, MoreHorizontal, CalendarDays, Undo } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CalendarDayDetailProps {
@@ -22,9 +22,16 @@ interface CalendarDayDetailProps {
   projects: CalendarProject[];
 }
 
+interface UndoState {
+  taskId: string;
+  previousDueDate: number | undefined;
+  action: 'reschedule' | 'move';
+}
+
 export function CalendarDayDetail({ date, projects }: CalendarDayDetailProps) {
   const { tasks, updateTask } = useTask();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [undoState, setUndoState] = useState<UndoState | null>(null);
 
   const dateStr = date.toLocaleDateString('en-GB', {
     weekday: 'long',
@@ -40,6 +47,18 @@ export function CalendarDayDetail({ date, projects }: CalendarDayDetailProps) {
 
   const selectedTask = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) || null : null;
 
+  const handleUndo = useCallback(async () => {
+    if (!undoState) return;
+
+    try {
+      await updateTask(undoState.taskId, { dueDate: undoState.previousDueDate });
+      toast.success('Undo successful');
+      setUndoState(null);
+    } catch (error) {
+      toast.error('Failed to undo');
+    }
+  }, [undoState, updateTask]);
+
   const handleQuickReschedule = async (taskId: string, daysToAdd: number) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task || !task.dueDate) return;
@@ -48,11 +67,28 @@ export function CalendarDayDetail({ date, projects }: CalendarDayDetailProps) {
     const newDue = new Date(currentDue);
     newDue.setDate(newDue.getDate() + daysToAdd);
 
+    // Store undo state before making change
+    setUndoState({
+      taskId,
+      previousDueDate: task.dueDate,
+      action: 'reschedule',
+    });
+
     try {
       await updateTask(taskId, { dueDate: newDue.getTime() });
-      toast.success(`Rescheduled to ${newDue.toLocaleDateString('en-GB')}`);
+      toast.success(
+        `Rescheduled to ${newDue.toLocaleDateString('en-GB')}`,
+        {
+          action: {
+            label: 'Undo',
+            onClick: handleUndo,
+          },
+          duration: 5000, // 5 seconds to undo
+        }
+      );
     } catch (error) {
       toast.error('Failed to reschedule');
+      setUndoState(null);
     }
   };
 
@@ -77,11 +113,28 @@ export function CalendarDayDetail({ date, projects }: CalendarDayDetailProps) {
     const newDue = new Date(targetDate);
     newDue.setHours(0, 0, 0, 0);
 
+    // Store undo state before making change
+    setUndoState({
+      taskId: projectId,
+      previousDueDate: task.dueDate,
+      action: 'move',
+    });
+
     try {
       await updateTask(projectId, { dueDate: newDue.getTime() });
-      toast.success(`Moved to ${targetDate.toLocaleDateString('en-GB')}`);
+      toast.success(
+        `Moved to ${targetDate.toLocaleDateString('en-GB')}`,
+        {
+          action: {
+            label: 'Undo',
+            onClick: handleUndo,
+          },
+          duration: 5000, // 5 seconds to undo
+        }
+      );
     } catch (error) {
       toast.error('Failed to move project');
+      setUndoState(null);
     }
   };
 
@@ -99,9 +152,22 @@ export function CalendarDayDetail({ date, projects }: CalendarDayDetailProps) {
             {projects.length} project{projects.length !== 1 ? 's' : ''} due
           </p>
         </div>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <CalendarDays className="h-4 w-4" />
-          <span className="text-xs">Drag projects here to reschedule</span>
+        <div className="flex items-center gap-2">
+          {undoState && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUndo}
+              className="flex items-center gap-1"
+            >
+              <Undo className="h-3 w-3" />
+              Undo {undoState.action}
+            </Button>
+          )}
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <CalendarDays className="h-4 w-4" />
+            <span className="text-xs">Drag projects here to reschedule</span>
+          </div>
         </div>
       </div>
 
