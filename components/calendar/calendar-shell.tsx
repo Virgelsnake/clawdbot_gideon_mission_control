@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useTask } from '@/contexts/task-context';
 import { calculateThresholdState } from '@/lib/calendar/threshold-engine';
 import { groupProjectsByDate } from '@/lib/calendar/calendar-api';
+import { useAutoReprioritisation } from '@/lib/calendar/use-auto-reprioritisation';
 import type { CalendarProject } from '@/types/calendar';
 import { CalendarMonthNavigator } from './calendar-month-navigator';
 import { CalendarDayDetail } from './calendar-day-detail';
@@ -12,6 +13,9 @@ import { Card } from '@/components/ui/card';
 export function CalendarShell() {
   const { tasks } = useTask();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Enable auto-reprioritisation
+  useAutoReprioritisation();
 
   // Convert tasks to calendar projects synchronously
   const calendarData = useMemo(() => {
