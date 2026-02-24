@@ -1,12 +1,15 @@
-'use client';
+import { Metadata } from 'next';
+import { CalendarShell } from '@/components/calendar/calendar-shell';
 
-import { EnhancedCalendarView } from '@/components/calendar/enhanced-calendar-view';
-import './calendar-styles.css';
+export const metadata: Metadata = {
+  title: 'Calendar | Mission Control',
+  description: 'Project calendar with threshold monitoring and auto-reprioritisation',
+};
 
 export default function CalendarPage() {
   return (
-    <div className="h-full p-6">
-      <EnhancedCalendarView />
-    </div>
+    <main className="container mx-auto py-6">
+      <CalendarShell />
+    </main>
   );
 }

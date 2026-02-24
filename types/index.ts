@@ -386,3 +386,6 @@ export interface DbCardGenerationQueue {
   retry_count: number;
   max_retries: number;
 }
+
+// Re-export calendar types
+export * from './calendar';
