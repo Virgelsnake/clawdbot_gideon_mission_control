@@ -29,6 +29,8 @@ import {
   Calendar,
   Flag,
   AlertCircle,
+  Archive,
+  RotateCcw,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -106,6 +108,7 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
 
   const style = transform ? {
@@ -119,9 +122,16 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
     }
   };
 
-  const handleDelete = () => {
-    deleteTask(task.id);
+  const handleSoftDelete = async () => {
+    const { softDeleteTask } = await import('@/lib/supabase/tasks');
+    await softDeleteTask(task.id);
     setIsDeleting(false);
+  };
+
+  const handleArchive = async () => {
+    const { archiveTask } = await import('@/lib/supabase/tasks');
+    await archiveTask(task.id);
+    setIsArchiving(false);
   };
 
   const priority = task.priority || 'medium';
@@ -180,6 +190,12 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
+              {task.column === 'done' && (
+                <DropdownMenuItem onClick={() => setIsArchiving(true)}>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archive
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => setIsDeleting(true)} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
@@ -251,20 +267,42 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Archive Confirmation */}
+      <Dialog open={isArchiving} onOpenChange={setIsArchiving}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Archive Project</DialogTitle>
+            <DialogDescription>
+              Archive &quot;{task.title}&quot;? It will be moved to the Archive and can be restored later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsArchiving(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleArchive}>
+              <Archive className="h-4 w-4 mr-2" />
+              Archive
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation */}
       <Dialog open={isDeleting} onOpenChange={setIsDeleting}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Delete Task</DialogTitle>
+            <DialogTitle>Delete Project</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{task.title}&quot;? This action cannot be undone.
+              Delete &quot;{task.title}&quot;? It will be moved to the Archive. You can restore it from there or permanently delete it later.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setIsDeleting(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button variant="destructive" onClick={handleSoftDelete}>
+              <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
           </DialogFooter>

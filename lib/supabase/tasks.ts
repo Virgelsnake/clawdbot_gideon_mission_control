@@ -104,3 +104,103 @@ export async function deleteTask(id: string): Promise<void> {
     metadata: { title: existing?.title ?? 'Unknown' },
   });
 }
+
+export async function archiveTask(id: string): Promise<Task> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ 
+      archived: true, 
+      archived_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  const updated = dbTaskToTask(data as DbTask);
+
+  logActivity({
+    actor: 'steve',
+    action: 'task_updated',
+    entityType: 'task',
+    entityId: id,
+    changes: { archived: { new: true } },
+    metadata: { title: updated.title, action: 'archived' },
+  });
+  return updated;
+}
+
+export async function restoreTask(id: string): Promise<Task> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ 
+      archived: false, 
+      archived_at: null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  const updated = dbTaskToTask(data as DbTask);
+
+  logActivity({
+    actor: 'steve',
+    action: 'task_updated',
+    entityType: 'task',
+    entityId: id,
+    changes: { archived: { new: false } },
+    metadata: { title: updated.title, action: 'restored' },
+  });
+  return updated;
+}
+
+export async function softDeleteTask(id: string): Promise<Task> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ 
+      deleted: true, 
+      deleted_at: new Date().toISOString(),
+      archived: true,
+      archived_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  const updated = dbTaskToTask(data as DbTask);
+
+  logActivity({
+    actor: 'steve',
+    action: 'task_updated',
+    entityType: 'task',
+    entityId: id,
+    changes: { deleted: { new: true }, archived: { new: true } },
+    metadata: { title: updated.title, action: 'soft_deleted' },
+  });
+  return updated;
+}
+
+export async function permanentlyDeleteTask(id: string): Promise<void> {
+  // Fetch task title before deleting for the activity log
+  const { data: existing } = await supabase
+    .from('tasks')
+    .select('title')
+    .eq('id', id)
+    .single();
+
+  const { error } = await supabase.from('tasks').delete().eq('id', id);
+  if (error) throw error;
+
+  logActivity({
+    actor: 'steve',
+    action: 'task_deleted',
+    entityType: 'task',
+    entityId: id,
+    metadata: { title: existing?.title ?? 'Unknown', action: 'permanently_deleted' },
+  });
+}

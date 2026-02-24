@@ -58,6 +58,10 @@ export interface Task {
   labels?: string[];
   createdAt: number;
   updatedAt: number;
+  archived?: boolean;
+  archivedAt?: number;
+  deleted?: boolean;
+  deletedAt?: number;
 }
 
 // Ideas types
@@ -83,6 +87,10 @@ export interface DbTask {
   created_by: string;
   created_at: string;
   updated_at: string;
+  archived: boolean;
+  archived_at: string | null;
+  deleted: boolean;
+  deleted_at: string | null;
 }
 
 export interface DbIdea {

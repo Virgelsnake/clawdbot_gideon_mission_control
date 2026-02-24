@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Tag, Users, LayoutGrid, MessageSquare, Plus, Trash2, Pencil, Check, X, Bot } from 'lucide-react';
+import { Tag, Users, LayoutGrid, MessageSquare, Plus, Trash2, Pencil, Check, X, Bot, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -568,6 +568,55 @@ function AutonomySection() {
   );
 }
 
+// --- Archive Section ---
+function ArchiveSection() {
+  const { isOpen } = useSettings();
+  
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">
+        Manage archived and deleted projects. Archived projects can be restored or permanently deleted.
+      </p>
+
+      <div className="grid gap-4">
+        <div className="rounded-lg border p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium">View Archive</h4>
+              <p className="text-[11px] text-muted-foreground">
+                Browse archived projects, restore them, or permanently delete.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                window.location.href = '/settings/archive';
+              }}
+            >
+              <Archive className="h-3.5 w-3.5 mr-2" />
+              Open Archive
+            </Button>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">How it works</h4>
+          <ul className="text-[11px] text-muted-foreground space-y-1 list-disc list-inside">
+            <li><strong>Archive:</strong> Projects in &quot;Done&quot; column can be archived (soft delete)</li>
+            <li><strong>Delete:</strong> Any project can be deleted — moves to archive first</li>
+            <li><strong>Restore:</strong> Archived projects can be restored to active board</li>
+            <li><strong>Permanent Delete:</strong> Remove forever from archive (cannot be undone)</li>
+            <li><strong>Audit Log:</strong> All deletions are logged for accountability</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Settings Tabs Content (shared between mobile and desktop) ---
 function SettingsTabsContent() {
   return (
@@ -593,6 +642,10 @@ function SettingsTabsContent() {
           <Bot className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Agent</span>
         </TabsTrigger>
+        <TabsTrigger value="archive" className="gap-1.5 text-xs">
+          <Archive className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Archive</span>
+        </TabsTrigger>
       </TabsList>
 
       <div className="mt-4 px-3">
@@ -610,6 +663,9 @@ function SettingsTabsContent() {
         </TabsContent>
         <TabsContent value="autonomy">
           <AutonomySection />
+        </TabsContent>
+        <TabsContent value="archive">
+          <ArchiveSection />
         </TabsContent>
       </div>
     </Tabs>

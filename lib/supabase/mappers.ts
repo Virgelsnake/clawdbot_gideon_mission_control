@@ -23,6 +23,10 @@ export function dbTaskToTask(row: DbTask): Task {
     labels: row.labels ?? [],
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
+    archived: row.archived,
+    archivedAt: row.archived_at ? new Date(row.archived_at).getTime() : undefined,
+    deleted: row.deleted,
+    deletedAt: row.deleted_at ? new Date(row.deleted_at).getTime() : undefined,
   };
 }
 
