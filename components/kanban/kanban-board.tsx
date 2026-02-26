@@ -46,7 +46,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ mobile }: KanbanBoardProps) {
-  const { tasks, filteredTasks, loading, filters, setFilter } = useTask();
+  const { tasks, filteredTasks, loading, filters, setFilter, archiveTask } = useTask();
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('board');
   const [mobileColumn, setMobileColumn] = useState<ColumnType>('todo');
@@ -358,6 +358,7 @@ export function KanbanBoard({ mobile }: KanbanBoardProps) {
         task={selectedTask}
         open={detailOpen}
         onOpenChange={setDetailOpen}
+        onArchive={archiveTask}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import {
   createTask as sbCreateTask,
   updateTask as sbUpdateTask,
   deleteTask as sbDeleteTask,
+  archiveTask as sbArchiveTask,
 } from '@/lib/supabase/tasks';
 import {
   fetchIdeas as sbFetchIdeas,
@@ -30,6 +31,7 @@ interface TaskContextValue {
   addTask: (title: string, description?: string, column?: KanbanColumn, priority?: Task['priority'], assignee?: string, dueDate?: number, labels?: string[]) => Promise<Task>;
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+  archiveTask: (id: string) => Promise<void>;
   moveTask: (id: string, toColumn: KanbanColumn) => Promise<void>;
   addIdea: (content: string) => void;
   deleteIdea: (id: string) => void;
@@ -260,6 +262,15 @@ export function TaskProvider({ children }: TaskProviderProps) {
     }
   }, []);
 
+  const archiveTask = useCallback(async (id: string) => {
+    try {
+      await sbArchiveTask(id);
+    } catch (err) {
+      console.error('Failed to archive task:', err);
+      throw err;
+    }
+  }, []);
+
   const moveTask = useCallback(async (id: string, toColumn: KanbanColumn) => {
     try {
       if (toColumn === 'in-progress') {
@@ -326,6 +337,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     addTask,
     updateTask,
     deleteTask,
+    archiveTask,
     moveTask,
     addIdea,
     deleteIdea,

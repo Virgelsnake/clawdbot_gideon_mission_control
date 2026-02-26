@@ -21,7 +21,18 @@ import {
   FileText,
   ExternalLink,
   RefreshCw,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { createTaskContextDoc, getTaskContextDoc } from '@/lib/task-context-doc-client';
 import { getTaskWorkflowMeta, setTaskWorkflowMeta } from '@/lib/task-workflow-meta';
@@ -31,6 +42,7 @@ interface TaskDetailDialogProps {
   task: Task | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onArchive?: (taskId: string) => Promise<void>;
 }
 
 const PRIORITY_CONFIG: Record<TaskPriority, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
@@ -97,8 +109,9 @@ function formatRelativeTime(timestamp: number): string {
   return `${months[date.getMonth()]} ${date.getDate()}`;
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onArchive }: TaskDetailDialogProps) {
   const [docExists, setDocExists] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [docPath, setDocPath] = useState('');
   const [loadingDoc, setLoadingDoc] = useState(false);
   const [savingDoc, setSavingDoc] = useState(false);
@@ -211,6 +224,20 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
     toast.success('Workflow metadata saved');
   };
 
+  const handleArchive = async () => {
+    if (!task || !onArchive) return;
+    setIsArchiving(true);
+    try {
+      await onArchive(task.id);
+      toast.success('Project archived successfully');
+      onOpenChange(false);
+    } catch (error) {
+      toast.error('Failed to archive project');
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
 
   if (!task) return null;
 
@@ -221,8 +248,56 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" showOverlay={false} className="w-full sm:max-w-lg flex flex-col overflow-y-auto overscroll-contain">
         <SheetHeader className="flex-shrink-0">
-          <SheetTitle className="text-lg leading-tight pr-6">{task.title}</SheetTitle>
-          <SheetDescription className="sr-only">Task details and comments</SheetDescription>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <SheetTitle className="text-lg leading-tight pr-6">{task.title}</SheetTitle>
+              <SheetDescription className="sr-only">Task details and comments</SheetDescription>
+            </div>
+            {onArchive && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    disabled={task.archived || isArchiving}
+                    aria-label="Delete project"
+                  >
+                    {isArchiving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Archive Project?</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to archive &quot;{task.title}&quot;? This will move the project to the archive where you can restore it later.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline">Cancel</Button>
+                    <Button
+                      onClick={handleArchive}
+                      disabled={isArchiving}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      {isArchiving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          Archiving...
+                        </>
+                      ) : (
+                        'Confirm'
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </SheetHeader>
 
         {/* Task Details */}
